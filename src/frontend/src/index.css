@@ -1,0 +1,198 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Playfair Display";
+  src: url("/assets/fonts/PlayfairDisplay.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DM Sans";
+  src: url("/assets/fonts/DMSans.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "General Sans";
+  src: url("/assets/fonts/GeneralSans.woff2") format("woff2");
+  font-weight: 200 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+
+    /* Dark premium theme - Elite Bounce */
+    --background: 0.12 0.005 240;
+    --foreground: 0.95 0.005 240;
+    --card: 0.16 0.007 240;
+    --card-foreground: 0.95 0.005 240;
+    --popover: 0.18 0.007 240;
+    --popover-foreground: 0.95 0.005 240;
+    --primary: 0.72 0.12 75;
+    --primary-foreground: 0.12 0.005 240;
+    --secondary: 0.22 0.008 240;
+    --secondary-foreground: 0.85 0.005 240;
+    --muted: 0.2 0.006 240;
+    --muted-foreground: 0.58 0.01 240;
+    --accent: 0.72 0.12 75;
+    --accent-foreground: 0.12 0.005 240;
+    --destructive: 0.58 0.22 25;
+    --destructive-foreground: 0.95 0 0;
+    --border: 0.28 0.01 240;
+    --input: 0.22 0.008 240;
+    --ring: 0.72 0.12 75;
+
+    /* Gold brand accent */
+    --gold: 0.72 0.12 75;
+    --gold-bright: 0.78 0.13 75;
+    --gold-dim: 0.6 0.1 75;
+
+    /* Chart colors */
+    --chart-1: 0.72 0.12 75;
+    --chart-2: 0.6 0.18 160;
+    --chart-3: 0.55 0.2 25;
+    --chart-4: 0.55 0.18 265;
+    --chart-5: 0.65 0.15 195;
+
+    /* Success / danger */
+    --success: 0.62 0.18 145;
+    --danger: 0.58 0.22 25;
+
+    /* Sidebar */
+    --sidebar: 0.14 0.006 240;
+    --sidebar-foreground: 0.95 0.005 240;
+    --sidebar-primary: 0.72 0.12 75;
+    --sidebar-primary-foreground: 0.12 0.005 240;
+    --sidebar-accent: 0.2 0.007 240;
+    --sidebar-accent-foreground: 0.85 0.005 240;
+    --sidebar-border: 0.25 0.01 240;
+    --sidebar-ring: 0.72 0.12 75;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "DM Sans", "General Sans", system-ui, sans-serif;
+    color-scheme: dark;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+}
+
+/* Grid background */
+.grid-bg {
+  background-color: oklch(var(--background));
+  background-image: linear-gradient(
+      oklch(0.25 0.008 240 / 0.4) 1px,
+      transparent 1px
+    ), linear-gradient(90deg, oklch(0.25 0.008 240 / 0.4) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Vignette overlay */
+.vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 40%,
+    oklch(0.06 0.003 240 / 0.7) 100%
+  );
+  pointer-events: none;
+}
+
+/* Gold gradient text */
+.gold-text {
+  background: linear-gradient(
+    135deg,
+    oklch(0.82 0.14 78) 0%,
+    oklch(0.72 0.12 75) 50%,
+    oklch(0.6 0.1 72) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Card with dark gradient */
+.elite-card {
+  background: linear-gradient(
+    145deg,
+    oklch(0.2 0.009 240) 0%,
+    oklch(0.16 0.007 240) 100%
+  );
+  border: 1px solid oklch(0.28 0.01 240);
+  box-shadow: 0 4px 24px oklch(0.05 0.003 240 / 0.6), 0 1px 0
+    oklch(0.35 0.012 240 / 0.3) inset;
+}
+
+/* Gold button */
+.btn-gold {
+  background: linear-gradient(
+    135deg,
+    oklch(0.24 0.01 240) 0%,
+    oklch(0.2 0.008 240) 100%
+  );
+  border: 1px solid oklch(0.72 0.12 75);
+  color: oklch(0.78 0.13 75);
+  box-shadow: 0 0 12px oklch(0.72 0.12 75 / 0.15);
+  transition: all 0.2s ease;
+}
+
+.btn-gold:hover {
+  background: linear-gradient(
+    135deg,
+    oklch(0.72 0.12 75 / 0.15) 0%,
+    oklch(0.72 0.12 75 / 0.08) 100%
+  );
+  box-shadow: 0 0 20px oklch(0.72 0.12 75 / 0.3);
+}
+
+/* Nav active underline */
+.nav-active {
+  border-bottom: 2px solid oklch(0.72 0.12 75);
+  color: oklch(0.95 0.005 240);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: oklch(0.14 0.006 240);
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(0.3 0.01 240);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.72 0.12 75 / 0.6);
+}
+
+/* Chart glow */
+.chart-glow path {
+  filter: drop-shadow(0 0 4px oklch(0.72 0.12 75 / 0.4));
+}
+
+/* Number display */
+.metric-value {
+  font-family: "DM Sans", sans-serif;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
