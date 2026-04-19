@@ -30,13 +30,34 @@ export interface JumpTest {
   'athleteId' : AthleteId,
   'distance' : [] | [number],
 }
+export type StrengthLiftType = { 'powerClean' : null } |
+  { 'backSquat' : null } |
+  { 'deadlift' : null };
+export interface StrengthRecord {
+  'id' : StrengthRecordId,
+  'date' : string,
+  'createdAt' : bigint,
+  'athleteId' : AthleteId,
+  'weightKg' : number,
+  'liftType' : StrengthLiftType,
+}
+export type StrengthRecordId = bigint;
 export type TestId = bigint;
 export type TestType = string;
+export interface TrainingSession {
+  'id' : string,
+  'fatigueLevel' : bigint,
+  'date' : string,
+  'createdAt' : bigint,
+  'createdBy' : Principal,
+  'notes' : string,
+  'athleteIds' : Array<string>,
+}
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
 export interface _SERVICE {
-  '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  '_initializeAccessControl' : ActorMethod<[], undefined>,
   'addJumpTest' : ActorMethod<
     [
       AthleteId,
@@ -49,15 +70,38 @@ export interface _SERVICE {
     ],
     TestId
   >,
+  'addStrengthRecord' : ActorMethod<
+    [AthleteId, StrengthLiftType, number, string],
+    StrengthRecordId
+  >,
+  'addTrainingSession' : ActorMethod<
+    [string, Array<string>, bigint, string],
+    TrainingSession
+  >,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'createAthlete' : ActorMethod<[string, bigint, string, string], AthleteId>,
   'deleteAthlete' : ActorMethod<[AthleteId], undefined>,
   'deleteJumpTest' : ActorMethod<[TestId], undefined>,
+  'deleteStrengthRecord' : ActorMethod<[StrengthRecordId], undefined>,
+  'deleteTrainingSession' : ActorMethod<[string], undefined>,
   'getAllAthletes' : ActorMethod<[], Array<Athlete>>,
-  'getAthlete' : ActorMethod<[AthleteId], Athlete>,
+  'getAllTrainingSessions' : ActorMethod<[], Array<TrainingSession>>,
+  'getAthlete' : ActorMethod<[AthleteId], [] | [Athlete]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getJumpTestsByType' : ActorMethod<[AthleteId, TestType], Array<JumpTest>>,
   'getJumpTestsForAthlete' : ActorMethod<[AthleteId], Array<JumpTest>>,
+  'getStrengthRecordsByLift' : ActorMethod<
+    [AthleteId, StrengthLiftType],
+    Array<StrengthRecord>
+  >,
+  'getStrengthRecordsForAthlete' : ActorMethod<
+    [AthleteId],
+    Array<StrengthRecord>
+  >,
+  'getTrainingSessionsForAthlete' : ActorMethod<
+    [string],
+    Array<TrainingSession>
+  >,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'updateAthlete' : ActorMethod<
     [AthleteId, string, bigint, string, string],

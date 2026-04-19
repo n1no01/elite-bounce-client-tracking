@@ -11,6 +11,21 @@ import { IDL } from '@icp-sdk/core/candid';
 export const AthleteId = IDL.Nat;
 export const TestType = IDL.Text;
 export const TestId = IDL.Nat;
+export const StrengthLiftType = IDL.Variant({
+  'powerClean' : IDL.Null,
+  'backSquat' : IDL.Null,
+  'deadlift' : IDL.Null,
+});
+export const StrengthRecordId = IDL.Nat;
+export const TrainingSession = IDL.Record({
+  'id' : IDL.Text,
+  'fatigueLevel' : IDL.Nat,
+  'date' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'createdBy' : IDL.Principal,
+  'notes' : IDL.Text,
+  'athleteIds' : IDL.Vec(IDL.Text),
+});
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
@@ -35,9 +50,17 @@ export const JumpTest = IDL.Record({
   'athleteId' : AthleteId,
   'distance' : IDL.Opt(IDL.Float64),
 });
+export const StrengthRecord = IDL.Record({
+  'id' : StrengthRecordId,
+  'date' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'athleteId' : AthleteId,
+  'weightKg' : IDL.Float64,
+  'liftType' : StrengthLiftType,
+});
 
 export const idlService = IDL.Service({
-  '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+  '_initializeAccessControl' : IDL.Func([], [], []),
   'addJumpTest' : IDL.Func(
       [
         AthleteId,
@@ -51,6 +74,16 @@ export const idlService = IDL.Service({
       [TestId],
       [],
     ),
+  'addStrengthRecord' : IDL.Func(
+      [AthleteId, StrengthLiftType, IDL.Float64, IDL.Text],
+      [StrengthRecordId],
+      [],
+    ),
+  'addTrainingSession' : IDL.Func(
+      [IDL.Text, IDL.Vec(IDL.Text), IDL.Nat, IDL.Text],
+      [TrainingSession],
+      [],
+    ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'createAthlete' : IDL.Func(
       [IDL.Text, IDL.Nat, IDL.Text, IDL.Text],
@@ -59,8 +92,15 @@ export const idlService = IDL.Service({
     ),
   'deleteAthlete' : IDL.Func([AthleteId], [], []),
   'deleteJumpTest' : IDL.Func([TestId], [], []),
+  'deleteStrengthRecord' : IDL.Func([StrengthRecordId], [], []),
+  'deleteTrainingSession' : IDL.Func([IDL.Text], [], []),
   'getAllAthletes' : IDL.Func([], [IDL.Vec(Athlete)], ['query']),
-  'getAthlete' : IDL.Func([AthleteId], [Athlete], ['query']),
+  'getAllTrainingSessions' : IDL.Func(
+      [],
+      [IDL.Vec(TrainingSession)],
+      ['query'],
+    ),
+  'getAthlete' : IDL.Func([AthleteId], [IDL.Opt(Athlete)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getJumpTestsByType' : IDL.Func(
       [AthleteId, TestType],
@@ -70,6 +110,21 @@ export const idlService = IDL.Service({
   'getJumpTestsForAthlete' : IDL.Func(
       [AthleteId],
       [IDL.Vec(JumpTest)],
+      ['query'],
+    ),
+  'getStrengthRecordsByLift' : IDL.Func(
+      [AthleteId, StrengthLiftType],
+      [IDL.Vec(StrengthRecord)],
+      ['query'],
+    ),
+  'getStrengthRecordsForAthlete' : IDL.Func(
+      [AthleteId],
+      [IDL.Vec(StrengthRecord)],
+      ['query'],
+    ),
+  'getTrainingSessionsForAthlete' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(TrainingSession)],
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
@@ -86,6 +141,21 @@ export const idlFactory = ({ IDL }) => {
   const AthleteId = IDL.Nat;
   const TestType = IDL.Text;
   const TestId = IDL.Nat;
+  const StrengthLiftType = IDL.Variant({
+    'powerClean' : IDL.Null,
+    'backSquat' : IDL.Null,
+    'deadlift' : IDL.Null,
+  });
+  const StrengthRecordId = IDL.Nat;
+  const TrainingSession = IDL.Record({
+    'id' : IDL.Text,
+    'fatigueLevel' : IDL.Nat,
+    'date' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'createdBy' : IDL.Principal,
+    'notes' : IDL.Text,
+    'athleteIds' : IDL.Vec(IDL.Text),
+  });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
     'user' : IDL.Null,
@@ -110,9 +180,17 @@ export const idlFactory = ({ IDL }) => {
     'athleteId' : AthleteId,
     'distance' : IDL.Opt(IDL.Float64),
   });
+  const StrengthRecord = IDL.Record({
+    'id' : StrengthRecordId,
+    'date' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'athleteId' : AthleteId,
+    'weightKg' : IDL.Float64,
+    'liftType' : StrengthLiftType,
+  });
   
   return IDL.Service({
-    '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+    '_initializeAccessControl' : IDL.Func([], [], []),
     'addJumpTest' : IDL.Func(
         [
           AthleteId,
@@ -126,6 +204,16 @@ export const idlFactory = ({ IDL }) => {
         [TestId],
         [],
       ),
+    'addStrengthRecord' : IDL.Func(
+        [AthleteId, StrengthLiftType, IDL.Float64, IDL.Text],
+        [StrengthRecordId],
+        [],
+      ),
+    'addTrainingSession' : IDL.Func(
+        [IDL.Text, IDL.Vec(IDL.Text), IDL.Nat, IDL.Text],
+        [TrainingSession],
+        [],
+      ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'createAthlete' : IDL.Func(
         [IDL.Text, IDL.Nat, IDL.Text, IDL.Text],
@@ -134,8 +222,15 @@ export const idlFactory = ({ IDL }) => {
       ),
     'deleteAthlete' : IDL.Func([AthleteId], [], []),
     'deleteJumpTest' : IDL.Func([TestId], [], []),
+    'deleteStrengthRecord' : IDL.Func([StrengthRecordId], [], []),
+    'deleteTrainingSession' : IDL.Func([IDL.Text], [], []),
     'getAllAthletes' : IDL.Func([], [IDL.Vec(Athlete)], ['query']),
-    'getAthlete' : IDL.Func([AthleteId], [Athlete], ['query']),
+    'getAllTrainingSessions' : IDL.Func(
+        [],
+        [IDL.Vec(TrainingSession)],
+        ['query'],
+      ),
+    'getAthlete' : IDL.Func([AthleteId], [IDL.Opt(Athlete)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getJumpTestsByType' : IDL.Func(
         [AthleteId, TestType],
@@ -145,6 +240,21 @@ export const idlFactory = ({ IDL }) => {
     'getJumpTestsForAthlete' : IDL.Func(
         [AthleteId],
         [IDL.Vec(JumpTest)],
+        ['query'],
+      ),
+    'getStrengthRecordsByLift' : IDL.Func(
+        [AthleteId, StrengthLiftType],
+        [IDL.Vec(StrengthRecord)],
+        ['query'],
+      ),
+    'getStrengthRecordsForAthlete' : IDL.Func(
+        [AthleteId],
+        [IDL.Vec(StrengthRecord)],
+        ['query'],
+      ),
+    'getTrainingSessionsForAthlete' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(TrainingSession)],
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),

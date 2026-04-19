@@ -1,0 +1,89 @@
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type TrainingSession = 
+ record {
+   athleteIds: vec text;
+   createdAt: int;
+   createdBy: principal;
+   date: text;
+   fatigueLevel: nat;
+   id: text;
+   notes: text;
+ };
+type TestType = text;
+type TestId = nat;
+type StrengthRecordId = nat;
+type StrengthRecord = 
+ record {
+   athleteId: AthleteId;
+   createdAt: int;
+   date: text;
+   id: StrengthRecordId;
+   liftType: StrengthLiftType;
+   weightKg: float64;
+ };
+type StrengthLiftType = 
+ variant {
+   backSquat;
+   deadlift;
+   powerClean;
+ };
+type JumpTest = 
+ record {
+   athleteId: AthleteId;
+   createdAt: int;
+   date: text;
+   distance: opt float64;
+   dropHeight: opt float64;
+   height: opt float64;
+   id: TestId;
+   rsi: opt float64;
+   testType: TestType;
+ };
+type AthleteId = nat;
+type Athlete = 
+ record {
+   age: nat;
+   createdAt: int;
+   id: AthleteId;
+   name: text;
+   notes: text;
+   sport: text;
+ };
+service : {
+  _initializeAccessControl: () -> ();
+  addJumpTest: (athleteId: AthleteId, testType: TestType, date: text, height:
+   opt float64, distance: opt float64, rsi: opt float64, dropHeight:
+   opt float64) -> (TestId);
+  addStrengthRecord: (athleteId: AthleteId, liftType: StrengthLiftType,
+   weightKg: float64, date: text) -> (StrengthRecordId);
+  addTrainingSession: (date: text, athleteIds: vec text, fatigueLevel: 
+   nat, notes: text) -> (TrainingSession);
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  createAthlete: (name: text, age: nat, sport: text, notes: text) ->
+   (AthleteId);
+  deleteAthlete: (id: AthleteId) -> ();
+  deleteJumpTest: (testId: TestId) -> ();
+  deleteStrengthRecord: (recordId: StrengthRecordId) -> ();
+  deleteTrainingSession: (sessionId: text) -> ();
+  getAllAthletes: () -> (vec Athlete) query;
+  getAllTrainingSessions: () -> (vec TrainingSession) query;
+  getAthlete: (id: AthleteId) -> (opt Athlete) query;
+  getCallerUserRole: () -> (UserRole) query;
+  getJumpTestsByType: (athleteId: AthleteId, testType: TestType) ->
+   (vec JumpTest) query;
+  getJumpTestsForAthlete: (athleteId: AthleteId) -> (vec JumpTest) query;
+  getStrengthRecordsByLift: (athleteId: AthleteId, liftType:
+   StrengthLiftType) -> (vec StrengthRecord) query;
+  getStrengthRecordsForAthlete: (athleteId: AthleteId) ->
+   (vec StrengthRecord) query;
+  getTrainingSessionsForAthlete: (athleteId: text) ->
+   (vec TrainingSession) query;
+  isCallerAdmin: () -> (bool) query;
+  updateAthlete: (id: AthleteId, name: text, age: nat, sport: text, notes:
+   text) -> ();
+}

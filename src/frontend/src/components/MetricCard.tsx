@@ -1,5 +1,5 @@
 import { Minus, TrendingDown, TrendingUp } from "lucide-react";
-import type { JumpTest } from "../backend";
+import type { JumpTest } from "../types";
 
 interface MetricCardProps {
   testType: string;
@@ -17,8 +17,9 @@ const TEST_DISPLAY: Record<string, { label: string; unit: string }> = {
 };
 
 function getMetricValue(test: JumpTest): number | null {
-  if (test.testType === "BJ") return test.distance ?? null;
-  return test.height ?? null;
+  if (test.testType === "BJ")
+    return test.distance != null ? test.distance : null;
+  return test.height != null ? test.height : null;
 }
 
 export function MetricCard({ testType, tests, index = 1 }: MetricCardProps) {

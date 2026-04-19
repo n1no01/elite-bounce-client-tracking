@@ -12,9 +12,9 @@ import { Link } from "@tanstack/react-router";
 import { ChevronRight, Loader2, Plus, Search, Users } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
-import type { Athlete } from "../backend";
 import { AddAthleteForm } from "../components/AddAthleteForm";
 import { useGetAllAthletes } from "../hooks/useQueries";
+import type { Athlete } from "../types";
 
 function getInitials(name: string) {
   return name
@@ -74,7 +74,7 @@ function AthleteRow({ athlete, index }: { athlete: Athlete; index: number }) {
 }
 
 export function Athletes() {
-  const { data: athletes = [], isLoading } = useGetAllAthletes();
+  const { data: athletes = [], isLoading, isError } = useGetAllAthletes();
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
 
@@ -144,6 +144,32 @@ export function Athletes() {
           />
         </div>
 
+        {/* Error state */}
+        {isError && (
+          <div
+            className="elite-card rounded-xl flex flex-col items-center justify-center p-10 text-center"
+            data-ocid="athletes.error_state"
+          >
+            <p className="font-semibold text-foreground mb-1">
+              Unable to load athletes
+            </p>
+            <p
+              className="text-sm mb-4"
+              style={{ color: "oklch(0.45 0.009 240)" }}
+            >
+              Please try refreshing the page. If the problem persists, log out
+              and back in.
+            </p>
+            <Button
+              variant="outline"
+              className="btn-gold text-sm"
+              onClick={() => window.location.reload()}
+            >
+              Refresh Page
+            </Button>
+          </div>
+        )}
+
         {/* Loading */}
         {isLoading && (
           <div className="space-y-3" data-ocid="athletes.loading_state">
@@ -154,7 +180,7 @@ export function Athletes() {
         )}
 
         {/* Empty state */}
-        {!isLoading && filtered.length === 0 && (
+        {!isLoading && !isError && filtered.length === 0 && (
           <div
             className="elite-card rounded-xl flex flex-col items-center justify-center p-16 text-center"
             data-ocid="athletes.empty_state"
@@ -183,7 +209,7 @@ export function Athletes() {
         )}
 
         {/* List */}
-        {!isLoading && (
+        {!isLoading && !isError && (
           <div className="space-y-3">
             {filtered.map((athlete, i) => (
               <AthleteRow

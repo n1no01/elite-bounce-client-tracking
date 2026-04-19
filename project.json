@@ -1,0 +1,24 @@
+{
+  "overview": "Elite Bounce is a coach-facing athlete progress tracking app. Coaches can manage athlete profiles, record jump test results (CMJ, SJ, Broad Jump, Drop Jump, and more) and gym strength records (back squat, power clean, deadlift), visualize progress with charts, compare athletes side by side, track personal bests, and log training sessions with attendance, fatigue levels, and notes.",
+  "features": [
+    "Athlete profiles with full CRUD",
+    "Jump test recording (CMJ, CMJ-AS, SJ, BJ, DJ, Approach Jump)",
+    "Strength records (back squat, power clean, deadlift in kg)",
+    "Personal bests tracker per athlete",
+    "Training session log with attendance, fatigue level, and notes",
+    "Progress charts for jumps and lifts",
+    "Athlete comparison view",
+    "CSV export for test and strength data",
+    "Internet Identity login"
+  ],
+  "category": "productivity",
+  "tags": [
+    "coaching",
+    "sports",
+    "athlete-tracking",
+    "performance",
+    "jump-testing",
+    "strength-training"
+  ],
+  "last_updated": "2026-04-19T17:18:03.899Z"
+}

@@ -11,8 +11,9 @@ import {
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { AthleteId } from "../backend";
+import { useActor } from "../hooks/useActor";
 import { useAddJumpTest } from "../hooks/useQueries";
+import type { AthleteId, TestType } from "../types";
 
 const TEST_TYPES = [
   { value: "CMJ", label: "Countermovement Jump (CMJ)" },
@@ -35,13 +36,21 @@ export function JumpTestForm({
   onCancel,
 }: JumpTestFormProps) {
   const today = new Date().toISOString().split("T")[0];
-  const [testType, setTestType] = useState("");
+  const [testType, setTestType] = useState<TestType | "">("");
   const [date, setDate] = useState(today);
   const [height, setHeight] = useState("");
   const [distance, setDistance] = useState("");
   const [rsi, setRsi] = useState("");
   const [dropHeight, setDropHeight] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const {
+    actor,
+    isFetching: actorFetching,
+    isError: actorError,
+    retry: retryActor,
+  } = useActor();
+  const isActorReady = !!actor && !actorFetching;
 
   const { mutateAsync, isPending } = useAddJumpTest();
 
@@ -82,15 +91,23 @@ export function JumpTestForm({
       return;
     }
     setErrors({});
+
+    // Coerce all numeric fields: parseFloat, NaN or unused field → null
+    const toNum = (val: string, active: boolean): number | null => {
+      if (!active || val === "") return null;
+      const n = Number.parseFloat(val);
+      return Number.isNaN(n) ? null : n;
+    };
+
     try {
       await mutateAsync({
-        athleteId,
-        testType,
+        athleteId: BigInt(athleteId),
+        testType: testType as TestType,
         date,
-        height: showHeight && height ? Number(height) : null,
-        distance: showDistance && distance ? Number(distance) : null,
-        rsi: showRsiDrop && rsi ? Number(rsi) : null,
-        dropHeight: showRsiDrop && dropHeight ? Number(dropHeight) : null,
+        height: toNum(height, showHeight),
+        distance: toNum(distance, showDistance),
+        rsi: toNum(rsi, showRsiDrop),
+        dropHeight: toNum(dropHeight, showRsiDrop),
       });
       toast.success(`${testType} test recorded!`);
       // Reset form
@@ -101,8 +118,9 @@ export function JumpTestForm({
       setRsi("");
       setDropHeight("");
       onSuccess?.();
-    } catch {
-      toast.error("Failed to save test. Please try again.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to save test: ${message}`);
     }
   };
 
@@ -118,7 +136,7 @@ export function JumpTestForm({
         <Select
           value={testType}
           onValueChange={(val) => {
-            setTestType(val);
+            setTestType(val as TestType);
             setErrors({});
           }}
         >
@@ -297,13 +315,27 @@ export function JumpTestForm({
       <div className="flex gap-3 pt-2">
         <Button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || (!isActorReady && !actorError)}
           className="flex-1 btn-gold"
           data-ocid="add_test.submit_button"
+          onClick={
+            actorError
+              ? (e) => {
+                  e.preventDefault();
+                  retryActor();
+                }
+              : undefined
+          }
         >
           {isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+            </>
+          ) : actorError ? (
+            "Retry Connection"
+          ) : !isActorReady ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Connecting...
             </>
           ) : (
             "Record Test"

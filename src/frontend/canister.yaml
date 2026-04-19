@@ -10,13 +10,13 @@ build:
         - |
           cat > env.json <<EOF
           {
-            "backend_host": "http://localhost:8081",
+            "backend_host": "$BACKEND_HOST",
             "backend_canister_id": "$BACKEND_CANISTER_ID",
-            "project_id": "undefined",
-            "ii_derivation_origin": "undefined"
+            "project_id": "$PROJECT_ID",
+            "ii_derivation_origin": "$II_DERIVATION_ORIGIN"
           }
           EOF
-        - pnpm --filter '@caffeine/template-frontend' build:skip-bindings
+        - pnpm --filter '@caffeine/template-frontend' build
 
     - type: pre-built
       url: https://github.com/dfinity/sdk/raw/refs/tags/0.27.0/src/distributed/assetstorage.wasm.gz

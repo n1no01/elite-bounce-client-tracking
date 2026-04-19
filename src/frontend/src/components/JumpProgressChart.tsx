@@ -7,7 +7,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { JumpTest } from "../backend";
+import type { JumpTest } from "../types";
 
 interface ChartPoint {
   date: string;
@@ -53,7 +53,18 @@ function getTestDisplayName(testType: string): string {
   return names[testType] ?? testType;
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface TooltipPayload {
+  value: number;
+  name: string;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  label?: string;
+}
+
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div

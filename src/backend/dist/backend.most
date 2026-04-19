@@ -1,0 +1,95 @@
+// Version: 1.0.0
+type AthleteId__1010234800 = Nat;
+type Athlete__791477018 =
+  {
+    age : Nat;
+    createdAt : Int;
+    id : AthleteId__1010234800;
+    name : Text;
+    notes : Text;
+    sport : Text
+  };
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type JumpTest__583495814 =
+  {
+    athleteId : AthleteId__1010234800;
+    createdAt : Int;
+    date : Text;
+    distance : ?Float;
+    dropHeight : ?Float;
+    height : ?Float;
+    id : TestId__407380655;
+    rsi : ?Float;
+    testType : TestType__1029072970
+  };
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type SessionId__833518903 = Nat;
+type StrengthLiftType__520617818 = {#backSquat; #deadlift; #powerClean};
+type StrengthRecordId__1025815826 = Nat;
+type StrengthRecord__504492192 =
+  {
+    athleteId : AthleteId__1010234800;
+    createdAt : Int;
+    date : Text;
+    id : StrengthRecordId__1025815826;
+    liftType : StrengthLiftType__520617818;
+    weightKg : Float
+  };
+type TestId__407380655 = Nat;
+type TestType__1029072970 = Text;
+type TrainingSession__449289004 =
+  {
+    athleteIds : [Text];
+    createdAt : Int;
+    createdBy : Principal;
+    date : Text;
+    fatigueLevel : Nat;
+    id : Text;
+    notes : Text
+  };
+type UserRole__1054455867 = {#admin; #guest; #user};
+actor {
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__1054455867>
+    };
+  stable athletes :
+    {
+      var root : Node__46230540<AthleteId__1010234800, Athlete__791477018>;
+      var size : Nat__490723111
+    };
+  stable jumpTests :
+    {
+      var root : Node__46230540<TestId__407380655, JumpTest__583495814>;
+      var size : Nat__490723111
+    };
+  stable var nextAthleteId : Nat;
+  stable var nextSessionId : Nat;
+  stable var nextStrengthRecordId : Nat;
+  stable var nextTestId : Nat;
+  stable strengthRecords :
+    {
+      var root :
+        Node__46230540<StrengthRecordId__1025815826,
+                        StrengthRecord__504492192>;
+      var size : Nat__490723111
+    };
+  stable trainingSessions :
+    {
+      var root :
+        Node__46230540<SessionId__833518903, TrainingSession__449289004>;
+      var size : Nat__490723111
+    }
+};

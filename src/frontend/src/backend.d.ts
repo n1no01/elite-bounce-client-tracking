@@ -8,6 +8,24 @@ export interface None {
 }
 export type Option<T> = Some<T> | None;
 export type TestType = string;
+export interface TrainingSession {
+    id: string;
+    fatigueLevel: bigint;
+    date: string;
+    createdAt: bigint;
+    createdBy: Principal;
+    notes: string;
+    athleteIds: Array<string>;
+}
+export type AthleteId = bigint;
+export interface StrengthRecord {
+    id: StrengthRecordId;
+    date: string;
+    createdAt: bigint;
+    athleteId: AthleteId;
+    weightKg: number;
+    liftType: StrengthLiftType;
+}
 export type TestId = bigint;
 export interface Athlete {
     id: AthleteId;
@@ -17,7 +35,7 @@ export interface Athlete {
     sport: string;
     notes: string;
 }
-export type AthleteId = bigint;
+export type StrengthRecordId = bigint;
 export interface JumpTest {
     id: TestId;
     rsi?: number;
@@ -29,6 +47,11 @@ export interface JumpTest {
     athleteId: AthleteId;
     distance?: number;
 }
+export enum StrengthLiftType {
+    powerClean = "powerClean",
+    backSquat = "backSquat",
+    deadlift = "deadlift"
+}
 export enum UserRole {
     admin = "admin",
     user = "user",
@@ -36,15 +59,23 @@ export enum UserRole {
 }
 export interface backendInterface {
     addJumpTest(athleteId: AthleteId, testType: TestType, date: string, height: number | null, distance: number | null, rsi: number | null, dropHeight: number | null): Promise<TestId>;
+    addStrengthRecord(athleteId: AthleteId, liftType: StrengthLiftType, weightKg: number, date: string): Promise<StrengthRecordId>;
+    addTrainingSession(date: string, athleteIds: Array<string>, fatigueLevel: bigint, notes: string): Promise<TrainingSession>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createAthlete(name: string, age: bigint, sport: string, notes: string): Promise<AthleteId>;
     deleteAthlete(id: AthleteId): Promise<void>;
     deleteJumpTest(testId: TestId): Promise<void>;
+    deleteStrengthRecord(recordId: StrengthRecordId): Promise<void>;
+    deleteTrainingSession(sessionId: string): Promise<void>;
     getAllAthletes(): Promise<Array<Athlete>>;
-    getAthlete(id: AthleteId): Promise<Athlete>;
+    getAllTrainingSessions(): Promise<Array<TrainingSession>>;
+    getAthlete(id: AthleteId): Promise<Athlete | null>;
     getCallerUserRole(): Promise<UserRole>;
     getJumpTestsByType(athleteId: AthleteId, testType: TestType): Promise<Array<JumpTest>>;
     getJumpTestsForAthlete(athleteId: AthleteId): Promise<Array<JumpTest>>;
+    getStrengthRecordsByLift(athleteId: AthleteId, liftType: StrengthLiftType): Promise<Array<StrengthRecord>>;
+    getStrengthRecordsForAthlete(athleteId: AthleteId): Promise<Array<StrengthRecord>>;
+    getTrainingSessionsForAthlete(athleteId: string): Promise<Array<TrainingSession>>;
     isCallerAdmin(): Promise<boolean>;
     updateAthlete(id: AthleteId, name: string, age: bigint, sport: string, notes: string): Promise<void>;
 }

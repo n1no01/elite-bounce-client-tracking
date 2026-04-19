@@ -12,7 +12,6 @@ import { Link } from "@tanstack/react-router";
 import { ChevronRight, Plus, Search, Users } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
-import type { Athlete, JumpTest } from "../backend";
 import { AddAthleteForm } from "../components/AddAthleteForm";
 import { JumpProgressChart } from "../components/JumpProgressChart";
 import { MetricCard } from "../components/MetricCard";
@@ -20,6 +19,7 @@ import {
   useGetAllAthletes,
   useGetJumpTestsForAthlete,
 } from "../hooks/useQueries";
+import type { Athlete, JumpTest } from "../types";
 
 const TEST_TYPES = ["CMJ", "CMJ-AS", "SJ", "DJ", "BJ", "Approach Jump"];
 

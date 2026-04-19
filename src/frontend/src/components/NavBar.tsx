@@ -6,6 +6,8 @@ import { useInternetIdentity } from "../hooks/useInternetIdentity";
 const navLinks = [
   { to: "/", label: "Dashboard" },
   { to: "/athletes", label: "Athlete Roster" },
+  { to: "/sessions", label: "Sessions" },
+  { to: "/athletes/compare", label: "Compare" },
 ];
 
 export function NavBar() {
@@ -25,7 +27,13 @@ export function NavBar() {
 
   const isActive = (to: string) => {
     if (to === "/") return currentPath === "/";
-    return currentPath.startsWith(to);
+    if (to === "/athletes")
+      return (
+        currentPath === "/athletes" ||
+        (currentPath.startsWith("/athletes/") &&
+          currentPath !== "/athletes/compare")
+      );
+    return currentPath === to || currentPath.startsWith(`${to}/`);
   };
 
   return (

@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useActor } from "../hooks/useActor";
 import { useCreateAthlete } from "../hooks/useQueries";
 
 interface AddAthleteFormProps {
@@ -19,17 +20,21 @@ export function AddAthleteForm({ onSuccess, onCancel }: AddAthleteFormProps) {
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const {
+    actor,
+    isFetching: actorFetching,
+    isError: actorError,
+    retry: retryActor,
+  } = useActor();
+  const isActorReady = !!actor && !actorFetching;
+
   const { mutateAsync, isPending } = useCreateAthlete();
 
   const validate = () => {
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = "Name is required";
-    if (
-      !age ||
-      Number.isNaN(Number(age)) ||
-      Number(age) < 1 ||
-      Number(age) > 120
-    )
+    const parsedAge = Number.parseInt(age, 10);
+    if (!age || Number.isNaN(parsedAge) || parsedAge < 1 || parsedAge > 120)
       errs.age = "Enter a valid age (1-120)";
     if (!sport.trim()) errs.sport = "Sport / hobby is required";
     return errs;
@@ -43,17 +48,19 @@ export function AddAthleteForm({ onSuccess, onCancel }: AddAthleteFormProps) {
       return;
     }
     setErrors({});
+    const parsedAge = Number.parseInt(age, 10);
     try {
       await mutateAsync({
         name: name.trim(),
-        age: Number(age),
+        age: parsedAge,
         sport: sport.trim(),
         notes: notes.trim(),
       });
       toast.success("Athlete added successfully!");
       onSuccess?.();
-    } catch {
-      toast.error("Failed to add athlete. Please try again.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to add athlete: ${message}`);
     }
   };
 
@@ -161,13 +168,27 @@ export function AddAthleteForm({ onSuccess, onCancel }: AddAthleteFormProps) {
       <div className="flex gap-3 pt-2">
         <Button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || (!isActorReady && !actorError)}
           className="flex-1 btn-gold"
           data-ocid="add_athlete.submit_button"
+          onClick={
+            actorError
+              ? (e) => {
+                  e.preventDefault();
+                  retryActor();
+                }
+              : undefined
+          }
         >
           {isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Adding...
+            </>
+          ) : actorError ? (
+            "Retry Connection"
+          ) : !isActorReady ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Connecting...
             </>
           ) : (
             "Add Athlete"
@@ -192,6 +213,23 @@ export function AddAthleteForm({ onSuccess, onCancel }: AddAthleteFormProps) {
           data-ocid="add_athlete.loading_state"
         >
           Adding athlete to roster...
+        </div>
+      )}
+      {actorError && !isPending && (
+        <div
+          className="text-center text-xs"
+          style={{ color: "oklch(0.65 0.18 25)" }}
+          data-ocid="add_athlete.error_state"
+        >
+          Connection failed. Click "Retry Connection" to try again.
+        </div>
+      )}
+      {!isActorReady && !actorError && !isPending && (
+        <div
+          className="text-center text-xs text-muted-foreground"
+          data-ocid="add_athlete.connecting_state"
+        >
+          Connecting to backend...
         </div>
       )}
     </form>
