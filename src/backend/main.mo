@@ -10,7 +10,11 @@ import Array "mo:core/Array";
 
 import AccessControl "mo:caffeineai-authorization/access-control";
 import MixinAuthorization "mo:caffeineai-authorization/MixinAuthorization";
+import Migration "migration";
 
+
+
+(with migration = Migration.run)
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -27,6 +31,7 @@ actor {
     sport : Text;
     notes : Text;
     createdAt : Int;
+    totalPaidKM : ?Float;
   };
 
   public type JumpTest = {
@@ -71,12 +76,22 @@ actor {
   };
 
   // Athlete CRUD
-  public shared ({ caller }) func createAthlete(name : Text, age : Nat, sport : Text, notes : Text) : async AthleteId {
+  public shared ({ caller }) func createAthlete(name : Text, age : Nat, sport : Text, notes : Text, totalPaidKM : ?Float) : async AthleteId {
     requireAuthenticated(caller);
     let id = nextAthleteId;
     nextAthleteId += 1;
-    athletes.add(id, { id; name; age; sport; notes; createdAt = Time.now() });
+    athletes.add(id, { id; name; age; sport; notes; createdAt = Time.now(); totalPaidKM });
     id;
+  };
+
+  public shared ({ caller }) func updateAthletePaid(athleteId : AthleteId, amount : Float) : async () {
+    requireAuthenticated(caller);
+    switch (athletes.get(athleteId)) {
+      case (null) { Runtime.trap("Athlete not found") };
+      case (?existing) {
+        athletes.add(athleteId, { existing with totalPaidKM = ?amount });
+      };
+    };
   };
 
   public shared ({ caller }) func updateAthlete(id : AthleteId, name : Text, age : Nat, sport : Text, notes : Text) : async () {
@@ -230,6 +245,7 @@ actor {
     athleteIds : [Text];
     fatigueLevel : Nat;
     notes : Text;
+    activities : ?Text;
     createdBy : Principal;
     createdAt : Int;
   };
@@ -243,6 +259,7 @@ actor {
     athleteIds : [Text],
     fatigueLevel : Nat,
     notes : Text,
+    activities : ?Text,
   ) : async TrainingSession {
     requireAuthenticated(caller);
     if (fatigueLevel < 1 or fatigueLevel > 5) {
@@ -256,11 +273,51 @@ actor {
       athleteIds;
       fatigueLevel;
       notes;
+      activities;
       createdBy = caller;
       createdAt = Time.now();
     };
     trainingSessions.add(id, session);
     session;
+  };
+
+  public shared ({ caller }) func updateTrainingSession(
+    sessionId : Text,
+    date : Text,
+    athleteIds : [Text],
+    fatigueLevel : Nat,
+    notes : Text,
+    activities : ?Text,
+  ) : async { #ok : TrainingSession; #err : Text } {
+    requireAuthenticated(caller);
+    if (fatigueLevel < 1 or fatigueLevel > 5) {
+      return #err("fatigueLevel must be between 1 and 5");
+    };
+    var foundKey : ?SessionId = null;
+    for ((key, session) in trainingSessions.entries()) {
+      if (session.id == sessionId) {
+        foundKey := ?key;
+      };
+    };
+    switch (foundKey) {
+      case (null) { #err("Session not found") };
+      case (?key) {
+        let existing = switch (trainingSessions.get(key)) {
+          case (?s) s;
+          case (null) { return #err("Session not found") };
+        };
+        let updated : TrainingSession = {
+          existing with
+          date;
+          athleteIds;
+          fatigueLevel;
+          notes;
+          activities;
+        };
+        trainingSessions.add(key, updated);
+        #ok(updated);
+      };
+    };
   };
 
   public shared ({ caller }) func deleteTrainingSession(sessionId : Text) : async () {
@@ -276,6 +333,19 @@ actor {
       case (?key) {
         trainingSessions.remove(key);
       };
+    };
+  };
+
+  public shared ({ caller }) func deleteAllTrainingSessionsForAthlete(athleteId : Text) : async () {
+    requireAuthenticated(caller);
+    var keysToDelete : List.List<SessionId> = List.empty<SessionId>();
+    for ((key, session) in trainingSessions.entries()) {
+      if (session.athleteIds.find(func(id : Text) : Bool { id == athleteId }) != null) {
+        keysToDelete.add(key);
+      };
+    };
+    for (key in keysToDelete.values()) {
+      trainingSessions.remove(key);
     };
   };
 

@@ -137,6 +137,218 @@ function BestCard({
   );
 }
 
+// ─── CMJ vs SJ Comparison ────────────────────────────────────────────────────
+
+export interface CmjSjDelta {
+  bestCmj: number | null;
+  bestSj: number | null;
+  diffCm: number | null;
+  diffPct: number | null;
+}
+
+export function computeCmjSjDelta(tests: JumpTest[]): CmjSjDelta {
+  const cmjTests = tests.filter(
+    (t) => t.testType === "CMJ" && t.height != null,
+  );
+  const sjTests = tests.filter((t) => t.testType === "SJ" && t.height != null);
+
+  const bestCmj =
+    cmjTests.length > 0
+      ? cmjTests.reduce((a, b) => (a.height! > b.height! ? a : b)).height!
+      : null;
+  const bestSj =
+    sjTests.length > 0
+      ? sjTests.reduce((a, b) => (a.height! > b.height! ? a : b)).height!
+      : null;
+
+  if (bestCmj === null || bestSj === null) {
+    return { bestCmj, bestSj, diffCm: null, diffPct: null };
+  }
+
+  const diffCm = bestCmj - bestSj;
+  const diffPct = (diffCm / bestSj) * 100;
+  return { bestCmj, bestSj, diffCm, diffPct };
+}
+
+interface CmjSjComparisonProps {
+  jumpTests: JumpTest[];
+}
+
+export function CmjSjComparison({ jumpTests }: CmjSjComparisonProps) {
+  const { bestCmj, bestSj, diffCm, diffPct } = computeCmjSjDelta(jumpTests);
+  const hasData = bestCmj !== null && bestSj !== null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.05 }}
+      className="mb-8 rounded-xl overflow-hidden"
+      style={{
+        background: "oklch(0.13 0.006 240)",
+        border: "1px solid oklch(0.22 0.008 240)",
+      }}
+      data-ocid="cmj_sj.section"
+    >
+      {/* Section Header */}
+      <div
+        className="px-5 py-4 flex items-center gap-3"
+        style={{ borderBottom: "1px solid oklch(0.20 0.008 240)" }}
+      >
+        <span
+          className="text-xs font-bold tracking-widest uppercase"
+          style={{ color: "oklch(0.78 0.13 75)" }}
+        >
+          CMJ vs SJ Analysis
+        </span>
+        <div
+          className="flex-1 h-px"
+          style={{ background: "oklch(0.72 0.12 75 / 0.2)" }}
+        />
+      </div>
+
+      {!hasData ? (
+        <div className="px-5 py-6 text-center" data-ocid="cmj_sj.empty_state">
+          <p className="text-sm" style={{ color: "oklch(0.50 0.009 240)" }}>
+            Not enough data — needs both CMJ and SJ results
+          </p>
+        </div>
+      ) : (
+        <div
+          className="grid grid-cols-2 sm:grid-cols-4 divide-x"
+          style={{ borderColor: "oklch(0.20 0.008 240)" }}
+        >
+          {/* Best CMJ */}
+          <div
+            className="px-5 py-4 flex flex-col gap-1"
+            data-ocid="cmj_sj.cmj_value"
+          >
+            <span
+              className="text-xs font-semibold tracking-wider uppercase"
+              style={{ color: "oklch(0.50 0.009 240)" }}
+            >
+              Best CMJ
+            </span>
+            <span
+              className="text-2xl font-bold font-display"
+              style={{ color: "oklch(0.78 0.13 75)" }}
+            >
+              {bestCmj!.toFixed(1)}
+              <span
+                className="text-sm font-normal ml-1"
+                style={{ color: "oklch(0.55 0.009 240)" }}
+              >
+                cm
+              </span>
+            </span>
+          </div>
+
+          {/* Best SJ */}
+          <div
+            className="px-5 py-4 flex flex-col gap-1"
+            data-ocid="cmj_sj.sj_value"
+          >
+            <span
+              className="text-xs font-semibold tracking-wider uppercase"
+              style={{ color: "oklch(0.50 0.009 240)" }}
+            >
+              Best SJ
+            </span>
+            <span
+              className="text-2xl font-bold font-display"
+              style={{ color: "oklch(0.90 0.005 240)" }}
+            >
+              {bestSj!.toFixed(1)}
+              <span
+                className="text-sm font-normal ml-1"
+                style={{ color: "oklch(0.55 0.009 240)" }}
+              >
+                cm
+              </span>
+            </span>
+            <span
+              className="text-xs"
+              style={{ color: "oklch(0.45 0.009 240)" }}
+            >
+              No arm swing
+            </span>
+          </div>
+
+          {/* Diff in cm */}
+          <div
+            className="px-5 py-4 flex flex-col gap-1"
+            data-ocid="cmj_sj.diff_cm"
+          >
+            <span
+              className="text-xs font-semibold tracking-wider uppercase"
+              style={{ color: "oklch(0.50 0.009 240)" }}
+            >
+              CMJ Advantage
+            </span>
+            <span
+              className="text-2xl font-bold font-display"
+              style={{
+                color:
+                  diffCm! >= 0 ? "oklch(0.78 0.13 75)" : "oklch(0.65 0.18 25)",
+              }}
+            >
+              {diffCm! >= 0 ? "+" : ""}
+              {diffCm!.toFixed(1)}
+              <span
+                className="text-sm font-normal ml-1"
+                style={{ color: "oklch(0.55 0.009 240)" }}
+              >
+                cm
+              </span>
+            </span>
+            <span
+              className="text-xs"
+              style={{ color: "oklch(0.45 0.009 240)" }}
+            >
+              CMJ minus SJ
+            </span>
+          </div>
+
+          {/* Diff in % */}
+          <div
+            className="px-5 py-4 flex flex-col gap-1"
+            data-ocid="cmj_sj.diff_pct"
+          >
+            <span
+              className="text-xs font-semibold tracking-wider uppercase"
+              style={{ color: "oklch(0.50 0.009 240)" }}
+            >
+              % Difference
+            </span>
+            <span
+              className="text-2xl font-bold font-display"
+              style={{
+                color:
+                  diffPct! >= 0 ? "oklch(0.78 0.13 75)" : "oklch(0.65 0.18 25)",
+              }}
+            >
+              {diffPct! >= 0 ? "+" : ""}
+              {diffPct!.toFixed(1)}
+              <span
+                className="text-sm font-normal ml-1"
+                style={{ color: "oklch(0.55 0.009 240)" }}
+              >
+                %
+              </span>
+            </span>
+            <span
+              className="text-xs"
+              style={{ color: "oklch(0.45 0.009 240)" }}
+            >
+              Relative to SJ
+            </span>
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 // ─── Personal Bests ───────────────────────────────────────────────────────────
 
 interface PersonalBestsProps {

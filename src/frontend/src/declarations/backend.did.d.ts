@@ -17,6 +17,7 @@ export interface Athlete {
   'createdAt' : bigint,
   'sport' : string,
   'notes' : string,
+  'totalPaidKM' : [] | [number],
 }
 export type AthleteId = bigint;
 export interface JumpTest {
@@ -50,6 +51,7 @@ export interface TrainingSession {
   'date' : string,
   'createdAt' : bigint,
   'createdBy' : Principal,
+  'activities' : [] | [string],
   'notes' : string,
   'athleteIds' : Array<string>,
 }
@@ -75,11 +77,15 @@ export interface _SERVICE {
     StrengthRecordId
   >,
   'addTrainingSession' : ActorMethod<
-    [string, Array<string>, bigint, string],
+    [string, Array<string>, bigint, string, [] | [string]],
     TrainingSession
   >,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  'createAthlete' : ActorMethod<[string, bigint, string, string], AthleteId>,
+  'createAthlete' : ActorMethod<
+    [string, bigint, string, string, [] | [number]],
+    AthleteId
+  >,
+  'deleteAllTrainingSessionsForAthlete' : ActorMethod<[string], undefined>,
   'deleteAthlete' : ActorMethod<[AthleteId], undefined>,
   'deleteJumpTest' : ActorMethod<[TestId], undefined>,
   'deleteStrengthRecord' : ActorMethod<[StrengthRecordId], undefined>,
@@ -106,6 +112,12 @@ export interface _SERVICE {
   'updateAthlete' : ActorMethod<
     [AthleteId, string, bigint, string, string],
     undefined
+  >,
+  'updateAthletePaid' : ActorMethod<[AthleteId, number], undefined>,
+  'updateTrainingSession' : ActorMethod<
+    [string, string, Array<string>, bigint, string, [] | [string]],
+    { 'ok' : TrainingSession } |
+      { 'err' : string }
   >,
 }
 export declare const idlService: IDL.ServiceClass;

@@ -118,9 +118,27 @@ export function useCreateAthlete() {
         BigInt(data.age),
         data.sport,
         data.notes,
+        null,
       );
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["athletes"] });
+    },
+  });
+}
+
+export function useUpdateAthletePaid() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { id: AthleteId; amount: number }) => {
+      const a = requireActor(actor);
+      return a.updateAthletePaid(data.id, data.amount);
+    },
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["athlete", variables.id.toString()],
+      });
       queryClient.invalidateQueries({ queryKey: ["athletes"] });
     },
   });
@@ -273,6 +291,7 @@ function normalizeSession(s: TrainingSession): TrainingSession {
     ...s,
     fatigueLevel: Number(s.fatigueLevel),
     createdAt: BigInt(s.createdAt), // keep as bigint but ensure it's a real bigint
+    activities: s.activities ?? undefined,
   };
 }
 
@@ -313,14 +332,51 @@ export function useAddTrainingSession() {
       athleteIds: string[];
       fatigueLevel: number;
       notes: string;
+      activities?: string;
     }) => {
       const a = requireActor(actor);
-      return a.addTrainingSession(
+      const result = await a.addTrainingSession(
         data.date,
         data.athleteIds,
         BigInt(data.fatigueLevel),
         data.notes,
+        data.activities?.trim() || null,
       );
+      return normalizeSession(result);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trainingSessions"] });
+    },
+  });
+}
+
+export function useUpdateTrainingSession() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      sessionId: string;
+      date: string;
+      athleteIds: string[];
+      fatigueLevel: number;
+      notes: string;
+      activities?: string;
+    }) => {
+      const a = requireActor(actor);
+      const result = await a.updateTrainingSession(
+        data.sessionId,
+        data.date,
+        data.athleteIds,
+        BigInt(data.fatigueLevel),
+        data.notes,
+        data.activities?.trim() || null,
+      );
+      if ("__kind__" in result && result.__kind__ === "err") {
+        throw new Error(result.err);
+      }
+      const session =
+        "ok" in result ? result.ok : (result as unknown as TrainingSession);
+      return normalizeSession(session as TrainingSession);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trainingSessions"] });
@@ -337,6 +393,23 @@ export function useDeleteTrainingSession() {
       return a.deleteTrainingSession(sessionId);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trainingSessions"] });
+    },
+  });
+}
+
+export function useDeleteAllSessionsForAthlete() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (athleteId: AthleteId) => {
+      const a = requireActor(actor);
+      return a.deleteAllTrainingSessionsForAthlete(athleteId.toString());
+    },
+    onSuccess: (_result, athleteId) => {
+      queryClient.invalidateQueries({
+        queryKey: ["trainingSessions", "athlete", athleteId.toString()],
+      });
       queryClient.invalidateQueries({ queryKey: ["trainingSessions"] });
     },
   });

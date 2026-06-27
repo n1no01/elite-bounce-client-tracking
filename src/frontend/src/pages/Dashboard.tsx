@@ -99,7 +99,7 @@ function AthleteHighlightCard({ athlete }: { athlete: Athlete }) {
           <JumpProgressChart
             tests={chartTests}
             testType={chartTestType}
-            title="Jump Progress (CMJ \u2013 Max Height)"
+            title={`Jump Progress (${chartTestType})`}
             height={180}
           />
         )}

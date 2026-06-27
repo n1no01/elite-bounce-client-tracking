@@ -1,8 +1,8 @@
+import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, ChevronDown, X } from "lucide-react";
 import { useState } from "react";
-import { JumpProgressChart } from "../components/JumpProgressChart";
-import { StrengthProgressChart } from "../components/StrengthProgressChart";
+import { computeCmjSjDelta } from "../components/PersonalBests";
 import {
   useGetAllAthletes,
   useGetJumpTestsForAthlete,
@@ -42,6 +42,51 @@ const LIFT_DISPLAY_NAMES: Record<StrengthLiftType, string> = {
   powerClean: "Power Clean",
   deadlift: "Deadlift",
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getJumpBest(
+  tests: JumpTest[],
+  testType: TestType,
+): { value: number | null; rsi: number | null; date: string | null } {
+  const filtered = tests.filter((t) => t.testType === testType);
+  if (filtered.length === 0) return { value: null, rsi: null, date: null };
+
+  if (testType === "BJ") {
+    const best = filtered.reduce(
+      (acc, t) => ((t.distance ?? 0) > (acc.distance ?? 0) ? t : acc),
+      filtered[0],
+    );
+    return {
+      value: best.distance ?? null,
+      rsi: null,
+      date: best.date,
+    };
+  }
+
+  const best = filtered.reduce(
+    (acc, t) => ((t.height ?? 0) > (acc.height ?? 0) ? t : acc),
+    filtered[0],
+  );
+  return {
+    value: best.height ?? null,
+    rsi: testType === "DJ" ? (best.rsi ?? null) : null,
+    date: best.date,
+  };
+}
+
+function getStrengthBest(
+  records: StrengthRecord[],
+  liftType: StrengthLiftType,
+): { value: number | null; date: string | null } {
+  const filtered = records.filter((r) => r.liftType === liftType);
+  if (filtered.length === 0) return { value: null, date: null };
+  const best = filtered.reduce(
+    (acc, r) => (r.weightKg > acc.weightKg ? r : acc),
+    filtered[0],
+  );
+  return { value: best.weightKg, date: best.date };
+}
 
 // ─── Athlete Selector ─────────────────────────────────────────────────────────
 
@@ -156,243 +201,467 @@ function AthleteSelector({
   );
 }
 
-// ─── No data placeholder ──────────────────────────────────────────────────────
+// ─── Personal Bests Table ─────────────────────────────────────────────────────
 
-function NoDataPlaceholder() {
-  return (
-    <div
-      className="flex items-center justify-center rounded-lg"
-      style={{
-        height: 180,
-        background: "oklch(0.15 0.006 240)",
-        border: "1px dashed oklch(0.24 0.009 240)",
-      }}
-      data-ocid="comparison.empty_state"
-    >
-      <p className="text-xs" style={{ color: "oklch(0.40 0.009 240)" }}>
-        No data recorded
-      </p>
-    </div>
-  );
-}
-
-// ─── Jump comparison row ───────────────────────────────────────────────────────
-
-interface JumpComparisonRowProps {
-  testType: TestType;
+interface PersonalBestsTableProps {
   tests1: JumpTest[];
   tests2: JumpTest[];
+  strength1: StrengthRecord[];
+  strength2: StrengthRecord[];
   athlete1Name: string;
   athlete2Name: string;
-  rowIndex: number;
 }
 
-function JumpComparisonRow({
-  testType,
+function ValueCell({
+  value,
+  unit,
+  isWinner,
+  isTie,
+}: {
+  value: number | null;
+  unit: string;
+  isWinner: boolean;
+  isTie: boolean;
+}) {
+  if (value === null) {
+    return (
+      <span className="text-sm" style={{ color: "oklch(0.38 0.009 240)" }}>
+        —
+      </span>
+    );
+  }
+  return (
+    <span
+      className={`text-sm font-semibold tabular-nums ${isWinner && !isTie ? "font-bold" : ""}`}
+      style={{
+        color:
+          isWinner && !isTie ? "oklch(0.78 0.13 75)" : "oklch(0.90 0.005 240)",
+      }}
+    >
+      {value}
+      <span
+        className="text-xs ml-0.5"
+        style={{ color: "oklch(0.52 0.009 240)" }}
+      >
+        {unit}
+      </span>
+    </span>
+  );
+}
+
+function PersonalBestsTable({
   tests1,
   tests2,
+  strength1,
+  strength2,
   athlete1Name,
   athlete2Name,
-  rowIndex,
-}: JumpComparisonRowProps) {
-  const filtered1 = tests1.filter((t) => t.testType === testType);
-  const filtered2 = tests2.filter((t) => t.testType === testType);
-  const hasAnyData = filtered1.length > 0 || filtered2.length > 0;
-
+}: PersonalBestsTableProps) {
   return (
     <div
       className="rounded-xl overflow-hidden"
       style={{ border: "1px solid oklch(0.22 0.008 240)" }}
-      data-ocid={`comparison.row.${rowIndex}`}
+      data-ocid="comparison.table"
     >
+      {/* Header */}
       <div
-        className="px-5 py-3 flex items-center gap-3"
+        className="grid grid-cols-3 px-5 py-3 text-xs font-semibold tracking-widest uppercase"
         style={{
           background: "oklch(0.16 0.007 240)",
           borderBottom: "1px solid oklch(0.22 0.008 240)",
+          color: "oklch(0.55 0.009 240)",
+        }}
+      >
+        <span>Metric</span>
+        <span
+          className="text-center truncate"
+          style={{ color: "oklch(0.72 0.12 75)" }}
+        >
+          {athlete1Name}
+        </span>
+        <span
+          className="text-center truncate"
+          style={{ color: "oklch(0.72 0.12 75)" }}
+        >
+          {athlete2Name}
+        </span>
+      </div>
+      {/* Jump Tests section label */}
+      <div
+        className="px-5 py-2"
+        style={{
+          background: "oklch(0.14 0.006 240)",
+          borderBottom: "1px solid oklch(0.20 0.008 240)",
         }}
       >
         <span
-          className="text-xs font-bold tracking-widest uppercase"
-          style={{ color: "oklch(0.72 0.12 75)" }}
+          className="text-xs font-semibold tracking-widest uppercase"
+          style={{ color: "oklch(0.50 0.009 240)" }}
         >
-          {testType}
+          Jump Tests
         </span>
-        <span className="text-xs" style={{ color: "oklch(0.45 0.009 240)" }}>
-          {TEST_DISPLAY_NAMES[testType]}
-        </span>
-        {!hasAnyData && (
-          <span
-            className="ml-auto text-xs"
-            style={{ color: "oklch(0.40 0.009 240)" }}
-          >
-            No data for either athlete
-          </span>
-        )}
       </div>
+      {/* Jump rows */}
+      {TEST_TYPES.map((testType, i) => {
+        const best1 = getJumpBest(tests1, testType);
+        const best2 = getJumpBest(tests2, testType);
+        const unit = testType === "BJ" ? "cm" : "cm";
+        const val1 = best1.value;
+        const val2 = best2.value;
+        const winner1 = val1 !== null && val2 !== null && val1 > val2;
+        const winner2 = val1 !== null && val2 !== null && val2 > val1;
+        const tie = val1 !== null && val2 !== null && val1 === val2;
 
+        return (
+          <div
+            key={testType}
+            className="grid grid-cols-3 px-5 py-4 items-start"
+            style={{
+              background:
+                i % 2 === 0
+                  ? "oklch(0.13 0.006 240)"
+                  : "oklch(0.115 0.005 240)",
+              borderBottom: "1px solid oklch(0.18 0.007 240)",
+            }}
+            data-ocid={`comparison.row.${i + 1}`}
+          >
+            {/* Metric name */}
+            <div>
+              <p
+                className="text-xs font-bold tracking-wide"
+                style={{ color: "oklch(0.80 0.009 240)" }}
+              >
+                {testType}
+              </p>
+              <p
+                className="text-xs mt-0.5"
+                style={{ color: "oklch(0.45 0.009 240)" }}
+              >
+                {TEST_DISPLAY_NAMES[testType]}
+              </p>
+            </div>
+
+            {/* Athlete 1 */}
+            <div className="text-center">
+              <ValueCell
+                value={val1}
+                unit={unit}
+                isWinner={winner1}
+                isTie={tie}
+              />
+              {testType === "DJ" && best1.rsi !== null && (
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "oklch(0.55 0.009 240)" }}
+                >
+                  RSI:{" "}
+                  <span
+                    style={{
+                      color:
+                        best1.rsi > (best2.rsi ?? 0) && !tie
+                          ? "oklch(0.78 0.13 75)"
+                          : "oklch(0.75 0.009 240)",
+                    }}
+                  >
+                    {best1.rsi.toFixed(2)}
+                  </span>
+                </p>
+              )}
+            </div>
+
+            {/* Athlete 2 */}
+            <div className="text-center">
+              <ValueCell
+                value={val2}
+                unit={unit}
+                isWinner={winner2}
+                isTie={tie}
+              />
+              {testType === "DJ" && best2.rsi !== null && (
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "oklch(0.55 0.009 240)" }}
+                >
+                  RSI:{" "}
+                  <span
+                    style={{
+                      color:
+                        best2.rsi > (best1.rsi ?? 0) && !tie
+                          ? "oklch(0.78 0.13 75)"
+                          : "oklch(0.75 0.009 240)",
+                    }}
+                  >
+                    {best2.rsi.toFixed(2)}
+                  </span>
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      {/* Strength section label */} {/* CMJ vs SJ delta section */}
       <div
-        className="grid grid-cols-1 md:grid-cols-2"
-        style={{ background: "oklch(0.13 0.006 240)" }}
+        className="px-5 py-2"
+        style={{
+          background: "oklch(0.14 0.006 240)",
+          borderBottom: "1px solid oklch(0.20 0.008 240)",
+          borderTop: "1px solid oklch(0.22 0.008 240)",
+        }}
       >
-        <div
-          className="p-5 md:border-r"
-          style={{ borderColor: "oklch(0.20 0.008 240)" }}
+        <span
+          className="text-xs font-semibold tracking-widest uppercase"
+          style={{ color: "oklch(0.78 0.13 75)" }}
         >
-          <p
-            className="text-xs font-semibold tracking-wide mb-3 truncate"
-            style={{ color: "oklch(0.65 0.009 240)" }}
-          >
-            {athlete1Name}
-          </p>
-          {filtered1.length === 0 ? (
-            <NoDataPlaceholder />
-          ) : (
-            <JumpProgressChart
-              tests={filtered1}
-              testType={testType}
-              height={180}
-            />
-          )}
-        </div>
-        <div className="p-5">
-          <p
-            className="text-xs font-semibold tracking-wide mb-3 truncate"
-            style={{ color: "oklch(0.65 0.009 240)" }}
-          >
-            {athlete2Name}
-          </p>
-          {filtered2.length === 0 ? (
-            <NoDataPlaceholder />
-          ) : (
-            <JumpProgressChart
-              tests={filtered2}
-              testType={testType}
-              height={180}
-            />
-          )}
-        </div>
+          CMJ vs SJ Analysis
+        </span>
       </div>
+      {/* CMJ vs SJ rows */}
+      {(() => {
+        const delta1 = computeCmjSjDelta(tests1);
+        const delta2 = computeCmjSjDelta(tests2);
+        const rows: Array<{
+          label: string;
+          sublabel: string;
+          val1: number | null;
+          val2: number | null;
+          unit: string;
+          isGold?: boolean;
+        }> = [
+          {
+            label: "Best CMJ",
+            sublabel: "With arm swing",
+            val1: delta1.bestCmj,
+            val2: delta2.bestCmj,
+            unit: "cm",
+          },
+          {
+            label: "Best SJ",
+            sublabel: "No arm swing",
+            val1: delta1.bestSj,
+            val2: delta2.bestSj,
+            unit: "cm",
+          },
+          {
+            label: "CMJ Advantage",
+            sublabel: "CMJ minus SJ",
+            val1: delta1.diffCm,
+            val2: delta2.diffCm,
+            unit: "cm",
+            isGold: true,
+          },
+          {
+            label: "% Difference",
+            sublabel: "Relative to SJ",
+            val1: delta1.diffPct,
+            val2: delta2.diffPct,
+            unit: "%",
+            isGold: true,
+          },
+        ];
+        return rows.map((row, i) => {
+          const { val1, val2, unit, label, sublabel, isGold } = row;
+          const winner1 = val1 !== null && val2 !== null && val1 > val2;
+          const winner2 = val1 !== null && val2 !== null && val2 > val1;
+          const tie = val1 !== null && val2 !== null && val1 === val2;
+
+          const formatVal = (v: number | null) => {
+            if (v === null) return null;
+            return unit === "%"
+              ? Math.round(v * 10) / 10
+              : Math.round(v * 10) / 10;
+          };
+
+          return (
+            <div
+              key={label}
+              className="grid grid-cols-3 px-5 py-4 items-start"
+              style={{
+                background:
+                  i % 2 === 0
+                    ? "oklch(0.13 0.006 240)"
+                    : "oklch(0.115 0.005 240)",
+                borderBottom:
+                  i < rows.length - 1
+                    ? "1px solid oklch(0.18 0.007 240)"
+                    : "none",
+              }}
+              data-ocid={`comparison.cmj_sj.row.${i + 1}`}
+            >
+              <div>
+                <p
+                  className="text-xs font-bold tracking-wide"
+                  style={{
+                    color: isGold
+                      ? "oklch(0.78 0.13 75)"
+                      : "oklch(0.80 0.009 240)",
+                  }}
+                >
+                  {label}
+                </p>
+                <p
+                  className="text-xs mt-0.5"
+                  style={{ color: "oklch(0.45 0.009 240)" }}
+                >
+                  {sublabel}
+                </p>
+              </div>
+              <div className="text-center">
+                {val1 === null ? (
+                  <span
+                    className="text-sm"
+                    style={{ color: "oklch(0.38 0.009 240)" }}
+                  >
+                    —
+                  </span>
+                ) : (
+                  <span
+                    className="text-sm font-semibold tabular-nums"
+                    style={{
+                      color:
+                        winner1 && !tie
+                          ? "oklch(0.78 0.13 75)"
+                          : "oklch(0.90 0.005 240)",
+                    }}
+                  >
+                    {val1 >= 0 && isGold ? "+" : ""}
+                    {formatVal(val1)}
+                    <span
+                      className="text-xs ml-0.5"
+                      style={{ color: "oklch(0.52 0.009 240)" }}
+                    >
+                      {unit}
+                    </span>
+                  </span>
+                )}
+              </div>
+              <div className="text-center">
+                {val2 === null ? (
+                  <span
+                    className="text-sm"
+                    style={{ color: "oklch(0.38 0.009 240)" }}
+                  >
+                    —
+                  </span>
+                ) : (
+                  <span
+                    className="text-sm font-semibold tabular-nums"
+                    style={{
+                      color:
+                        winner2 && !tie
+                          ? "oklch(0.78 0.13 75)"
+                          : "oklch(0.90 0.005 240)",
+                    }}
+                  >
+                    {val2 >= 0 && isGold ? "+" : ""}
+                    {formatVal(val2)}
+                    <span
+                      className="text-xs ml-0.5"
+                      style={{ color: "oklch(0.52 0.009 240)" }}
+                    >
+                      {unit}
+                    </span>
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        });
+      })()}
+      <div
+        className="px-5 py-2"
+        style={{
+          background: "oklch(0.14 0.006 240)",
+          borderBottom: "1px solid oklch(0.20 0.008 240)",
+          borderTop: "1px solid oklch(0.22 0.008 240)",
+        }}
+      >
+        <span
+          className="text-xs font-semibold tracking-widest uppercase"
+          style={{ color: "oklch(0.50 0.009 240)" }}
+        >
+          Strength Records
+        </span>
+      </div>
+      {/* Strength rows */}
+      {LIFT_TYPES.map((liftType, i) => {
+        const best1 = getStrengthBest(strength1, liftType);
+        const best2 = getStrengthBest(strength2, liftType);
+        const val1 = best1.value;
+        const val2 = best2.value;
+        const winner1 = val1 !== null && val2 !== null && val1 > val2;
+        const winner2 = val1 !== null && val2 !== null && val2 > val1;
+        const tie = val1 !== null && val2 !== null && val1 === val2;
+
+        return (
+          <div
+            key={liftType}
+            className="grid grid-cols-3 px-5 py-4 items-center"
+            style={{
+              background:
+                i % 2 === 0
+                  ? "oklch(0.13 0.006 240)"
+                  : "oklch(0.115 0.005 240)",
+              borderBottom:
+                i < LIFT_TYPES.length - 1
+                  ? "1px solid oklch(0.18 0.007 240)"
+                  : "none",
+            }}
+            data-ocid={`comparison.strength.row.${i + 1}`}
+          >
+            <div>
+              <p
+                className="text-xs font-bold tracking-wide"
+                style={{ color: "oklch(0.80 0.009 240)" }}
+              >
+                {LIFT_DISPLAY_NAMES[liftType]}
+              </p>
+              <p
+                className="text-xs mt-0.5"
+                style={{ color: "oklch(0.45 0.009 240)" }}
+              >
+                Max weight lifted
+              </p>
+            </div>
+
+            <div className="text-center">
+              <ValueCell
+                value={val1}
+                unit="kg"
+                isWinner={winner1}
+                isTie={tie}
+              />
+            </div>
+
+            <div className="text-center">
+              <ValueCell
+                value={val2}
+                unit="kg"
+                isWinner={winner2}
+                isTie={tie}
+              />
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-// ─── Strength comparison row ───────────────────────────────────────────────────
+// ─── Comparison content (fetches data) ────────────────────────────────────────
 
-interface StrengthComparisonRowProps {
-  liftType: StrengthLiftType;
-  records1: StrengthRecord[];
-  records2: StrengthRecord[];
-  athlete1Name: string;
-  athlete2Name: string;
-  rowIndex: number;
-}
-
-function StrengthComparisonRow({
-  liftType,
-  records1,
-  records2,
-  athlete1Name,
-  athlete2Name,
-  rowIndex,
-}: StrengthComparisonRowProps) {
-  const filtered1 = records1.filter((r) => r.liftType === liftType);
-  const filtered2 = records2.filter((r) => r.liftType === liftType);
-  const hasAnyData = filtered1.length > 0 || filtered2.length > 0;
-
-  return (
-    <div
-      className="rounded-xl overflow-hidden"
-      style={{ border: "1px solid oklch(0.22 0.008 240)" }}
-      data-ocid={`comparison.strength.row.${rowIndex}`}
-    >
-      <div
-        className="px-5 py-3 flex items-center gap-3"
-        style={{
-          background: "oklch(0.16 0.007 240)",
-          borderBottom: "1px solid oklch(0.22 0.008 240)",
-        }}
-      >
-        <span
-          className="text-xs font-bold tracking-widest uppercase"
-          style={{ color: "oklch(0.72 0.12 75)" }}
-        >
-          {LIFT_DISPLAY_NAMES[liftType]}
-        </span>
-        <span className="text-xs" style={{ color: "oklch(0.45 0.009 240)" }}>
-          kg
-        </span>
-        {!hasAnyData && (
-          <span
-            className="ml-auto text-xs"
-            style={{ color: "oklch(0.40 0.009 240)" }}
-          >
-            No data for either athlete
-          </span>
-        )}
-      </div>
-
-      <div
-        className="grid grid-cols-1 md:grid-cols-2"
-        style={{ background: "oklch(0.13 0.006 240)" }}
-      >
-        <div
-          className="p-5 md:border-r"
-          style={{ borderColor: "oklch(0.20 0.008 240)" }}
-        >
-          <p
-            className="text-xs font-semibold tracking-wide mb-3 truncate"
-            style={{ color: "oklch(0.65 0.009 240)" }}
-          >
-            {athlete1Name}
-          </p>
-          {filtered1.length === 0 ? (
-            <NoDataPlaceholder />
-          ) : (
-            <StrengthProgressChart
-              records={filtered1}
-              liftType={liftType}
-              height={180}
-            />
-          )}
-        </div>
-        <div className="p-5">
-          <p
-            className="text-xs font-semibold tracking-wide mb-3 truncate"
-            style={{ color: "oklch(0.65 0.009 240)" }}
-          >
-            {athlete2Name}
-          </p>
-          {filtered2.length === 0 ? (
-            <NoDataPlaceholder />
-          ) : (
-            <StrengthProgressChart
-              records={filtered2}
-              liftType={liftType}
-              height={180}
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Combined charts (fetches both athletes' data) ────────────────────────────
-
-interface ComparisonChartsProps {
+interface ComparisonContentProps {
   athleteId1: AthleteId;
   athleteId2: AthleteId;
   athlete1Name: string;
   athlete2Name: string;
 }
 
-function ComparisonCharts({
+function ComparisonContent({
   athleteId1,
   athleteId2,
   athlete1Name,
   athlete2Name,
-}: ComparisonChartsProps) {
+}: ComparisonContentProps) {
   const { data: tests1 = [], isLoading: loadingTests1 } =
     useGetJumpTestsForAthlete(athleteId1);
   const { data: tests2 = [], isLoading: loadingTests2 } =
@@ -407,66 +676,23 @@ function ComparisonCharts({
 
   if (isLoading) {
     return (
-      <div className="space-y-4" data-ocid="comparison.loading_state">
-        {[...TEST_TYPES, ...LIFT_TYPES].map((t) => (
-          <div
-            key={t}
-            className="h-40 rounded-xl animate-pulse"
-            style={{ background: "oklch(0.16 0.007 240)" }}
-          />
+      <div className="space-y-2" data-ocid="comparison.loading_state">
+        {["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9"].map((k) => (
+          <Skeleton key={k} className="h-14 w-full rounded-lg" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {/* Jump Tests */}
-      <div>
-        <h3
-          className="text-xs font-semibold tracking-widest uppercase mb-4"
-          style={{ color: "oklch(0.58 0.01 240)" }}
-        >
-          Jump Tests
-        </h3>
-        <div className="space-y-4" data-ocid="comparison.jumps.list">
-          {TEST_TYPES.map((testType, i) => (
-            <JumpComparisonRow
-              key={testType}
-              testType={testType}
-              tests1={tests1}
-              tests2={tests2}
-              athlete1Name={athlete1Name}
-              athlete2Name={athlete2Name}
-              rowIndex={i + 1}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Strength */}
-      <div>
-        <h3
-          className="text-xs font-semibold tracking-widest uppercase mb-4"
-          style={{ color: "oklch(0.58 0.01 240)" }}
-        >
-          Strength
-        </h3>
-        <div className="space-y-4" data-ocid="comparison.strength.list">
-          {LIFT_TYPES.map((liftType, i) => (
-            <StrengthComparisonRow
-              key={liftType}
-              liftType={liftType}
-              records1={strength1}
-              records2={strength2}
-              athlete1Name={athlete1Name}
-              athlete2Name={athlete2Name}
-              rowIndex={i + 1}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
+    <PersonalBestsTable
+      tests1={tests1}
+      tests2={tests2}
+      strength1={strength1}
+      strength2={strength2}
+      athlete1Name={athlete1Name}
+      athlete2Name={athlete2Name}
+    />
   );
 }
 
@@ -497,7 +723,7 @@ export function AthleteComparison() {
           borderColor: "oklch(0.22 0.008 240)",
         }}
       >
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-5xl mx-auto px-6 py-4">
           <div className="flex items-center gap-4 mb-1">
             <Link
               to="/athletes"
@@ -516,10 +742,16 @@ export function AthleteComparison() {
             Athlete{" "}
             <span style={{ color: "oklch(0.78 0.13 75)" }}>Comparison</span>
           </h1>
+          <p
+            className="text-xs mt-1"
+            style={{ color: "oklch(0.50 0.009 240)" }}
+          >
+            Personal bests side-by-side
+          </p>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
         {/* Selector panel */}
         <div
           className="rounded-xl p-6"
@@ -588,7 +820,7 @@ export function AthleteComparison() {
               data-ocid="comparison.empty_state"
             >
               {athleteId1 === null && athleteId2 === null
-                ? "Choose two different athletes above to see their test histories side-by-side."
+                ? "Choose two different athletes above to compare their personal bests."
                 : athleteId1 !== null && athleteId2 === null
                   ? "Now select a second athlete."
                   : athleteId1 !== null &&
@@ -600,9 +832,9 @@ export function AthleteComparison() {
           )}
         </div>
 
-        {/* Comparison charts */}
+        {/* Personal bests comparison */}
         {canCompare && athlete1 && athlete2 && (
-          <ComparisonCharts
+          <ComparisonContent
             athleteId1={athleteId1}
             athleteId2={athleteId2}
             athlete1Name={athlete1.name}

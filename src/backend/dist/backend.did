@@ -6,6 +6,7 @@ type UserRole =
  };
 type TrainingSession = 
  record {
+   activities: opt text;
    athleteIds: vec text;
    createdAt: int;
    createdBy: principal;
@@ -53,6 +54,7 @@ type Athlete =
    name: text;
    notes: text;
    sport: text;
+   totalPaidKM: opt float64;
  };
 service : {
   _initializeAccessControl: () -> ();
@@ -62,10 +64,11 @@ service : {
   addStrengthRecord: (athleteId: AthleteId, liftType: StrengthLiftType,
    weightKg: float64, date: text) -> (StrengthRecordId);
   addTrainingSession: (date: text, athleteIds: vec text, fatigueLevel: 
-   nat, notes: text) -> (TrainingSession);
+   nat, notes: text, activities: opt text) -> (TrainingSession);
   assignCallerUserRole: (user: principal, role: UserRole) -> ();
-  createAthlete: (name: text, age: nat, sport: text, notes: text) ->
-   (AthleteId);
+  createAthlete: (name: text, age: nat, sport: text, notes: text,
+   totalPaidKM: opt float64) -> (AthleteId);
+  deleteAllTrainingSessionsForAthlete: (athleteId: text) -> ();
   deleteAthlete: (id: AthleteId) -> ();
   deleteJumpTest: (testId: TestId) -> ();
   deleteStrengthRecord: (recordId: StrengthRecordId) -> ();
@@ -86,4 +89,11 @@ service : {
   isCallerAdmin: () -> (bool) query;
   updateAthlete: (id: AthleteId, name: text, age: nat, sport: text, notes:
    text) -> ();
+  updateAthletePaid: (athleteId: AthleteId, amount: float64) -> ();
+  updateTrainingSession: (sessionId: text, date: text, athleteIds: vec text,
+   fatigueLevel: nat, notes: text, activities: opt text) ->
+   (variant {
+      err: text;
+      ok: TrainingSession;
+    });
 }

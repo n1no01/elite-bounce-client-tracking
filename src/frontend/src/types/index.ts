@@ -14,6 +14,7 @@ export interface Athlete {
   sport: string;
   notes: string;
   createdAt: bigint;
+  totalPaidKM?: number;
 }
 
 export interface JumpTest {
@@ -44,6 +45,7 @@ export interface TrainingSession {
   athleteIds: string[];
   fatigueLevel: number;
   notes: string;
+  activities?: string;
   createdAt: bigint;
 }
 
@@ -54,6 +56,7 @@ export interface BackendActor {
     age: bigint,
     sport: string,
     notes: string,
+    totalPaidKM: number | null,
   ): Promise<AthleteId>;
   updateAthlete(
     id: AthleteId,
@@ -93,10 +96,23 @@ export interface BackendActor {
     athleteIds: string[],
     fatigueLevel: bigint,
     notes: string,
+    activities: string | null,
   ): Promise<TrainingSession>;
+  updateTrainingSession(
+    sessionId: string,
+    date: string,
+    athleteIds: string[],
+    fatigueLevel: bigint,
+    notes: string,
+    activities: string | null,
+  ): Promise<
+    { __kind__: "ok"; ok: TrainingSession } | { __kind__: "err"; err: string }
+  >;
   deleteTrainingSession(sessionId: string): Promise<void>;
+  deleteAllTrainingSessionsForAthlete(athleteId: string): Promise<void>;
   getAllTrainingSessions(): Promise<TrainingSession[]>;
   getTrainingSessionsForAthlete(athleteId: string): Promise<TrainingSession[]>;
+  updateAthletePaid(id: AthleteId, amount: number): Promise<void>;
   isCallerAdmin(): Promise<boolean>;
   _initializeAccessControl?(): Promise<void>;
 }

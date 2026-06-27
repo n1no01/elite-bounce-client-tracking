@@ -14,6 +14,7 @@ export interface TrainingSession {
     date: string;
     createdAt: bigint;
     createdBy: Principal;
+    activities?: string;
     notes: string;
     athleteIds: Array<string>;
 }
@@ -34,6 +35,7 @@ export interface Athlete {
     createdAt: bigint;
     sport: string;
     notes: string;
+    totalPaidKM?: number;
 }
 export type StrengthRecordId = bigint;
 export interface JumpTest {
@@ -60,9 +62,10 @@ export enum UserRole {
 export interface backendInterface {
     addJumpTest(athleteId: AthleteId, testType: TestType, date: string, height: number | null, distance: number | null, rsi: number | null, dropHeight: number | null): Promise<TestId>;
     addStrengthRecord(athleteId: AthleteId, liftType: StrengthLiftType, weightKg: number, date: string): Promise<StrengthRecordId>;
-    addTrainingSession(date: string, athleteIds: Array<string>, fatigueLevel: bigint, notes: string): Promise<TrainingSession>;
+    addTrainingSession(date: string, athleteIds: Array<string>, fatigueLevel: bigint, notes: string, activities: string | null): Promise<TrainingSession>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    createAthlete(name: string, age: bigint, sport: string, notes: string): Promise<AthleteId>;
+    createAthlete(name: string, age: bigint, sport: string, notes: string, totalPaidKM: number | null): Promise<AthleteId>;
+    deleteAllTrainingSessionsForAthlete(athleteId: string): Promise<void>;
     deleteAthlete(id: AthleteId): Promise<void>;
     deleteJumpTest(testId: TestId): Promise<void>;
     deleteStrengthRecord(recordId: StrengthRecordId): Promise<void>;
@@ -78,4 +81,12 @@ export interface backendInterface {
     getTrainingSessionsForAthlete(athleteId: string): Promise<Array<TrainingSession>>;
     isCallerAdmin(): Promise<boolean>;
     updateAthlete(id: AthleteId, name: string, age: bigint, sport: string, notes: string): Promise<void>;
+    updateAthletePaid(athleteId: AthleteId, amount: number): Promise<void>;
+    updateTrainingSession(sessionId: string, date: string, athleteIds: Array<string>, fatigueLevel: bigint, notes: string, activities: string | null): Promise<{
+        __kind__: "ok";
+        ok: TrainingSession;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
 }

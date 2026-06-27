@@ -38,10 +38,11 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { JumpProgressChart } from "../components/JumpProgressChart";
 import { JumpTestForm } from "../components/JumpTestForm";
-import { PersonalBests } from "../components/PersonalBests";
+import { CmjSjComparison, PersonalBests } from "../components/PersonalBests";
 import { StrengthProgressChart } from "../components/StrengthProgressChart";
 import { StrengthRecordForm } from "../components/StrengthRecordForm";
 import {
+  useDeleteAllSessionsForAthlete,
   useDeleteAthlete,
   useDeleteJumpTest,
   useDeleteStrengthRecord,
@@ -52,6 +53,7 @@ import {
   useGetTrainingSessionsForAthlete,
   useUpdateAthlete,
 } from "../hooks/useQueries";
+import { useUpdateAthletePaid } from "../hooks/useQueries";
 import type {
   AthleteId,
   JumpTest,
@@ -723,10 +725,17 @@ function FatigueChip({ level }: { level: number }) {
   );
 }
 
-function AthleteSessionsSection({ athleteId }: { athleteId: AthleteId }) {
+function AthleteSessionsSection({
+  athleteId,
+  athleteName,
+}: {
+  athleteId: AthleteId;
+  athleteName: string;
+}) {
   const { data: sessions = [], isLoading } =
     useGetTrainingSessionsForAthlete(athleteId);
   const deleteSession = useDeleteTrainingSession();
+  const deleteAllSessions = useDeleteAllSessionsForAthlete();
 
   const sorted = [...sessions].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
@@ -738,6 +747,15 @@ function AthleteSessionsSection({ athleteId }: { athleteId: AthleteId }) {
       toast.success("Session removed.");
     } catch {
       toast.error("Failed to remove session.");
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    try {
+      await deleteAllSessions.mutateAsync(athleteId);
+      toast.success("All sessions deleted.");
+    } catch {
+      toast.error("Failed to delete all sessions.");
     }
   };
 
@@ -775,7 +793,7 @@ function AthleteSessionsSection({ athleteId }: { athleteId: AthleteId }) {
       <table className="w-full text-sm">
         <thead>
           <tr style={{ borderBottom: "1px solid oklch(0.24 0.008 240)" }}>
-            {["Date", "Fatigue", "Notes", ""].map((h) => (
+            {["Date", "Fatigue", "Activities & Notes", ""].map((h) => (
               <th
                 key={h}
                 className={`py-3 text-left text-xs font-semibold tracking-wider uppercase pr-4 first:pl-5 last:pr-5 ${h === "" ? "text-right" : ""}`}
@@ -793,7 +811,7 @@ function AthleteSessionsSection({ athleteId }: { athleteId: AthleteId }) {
               style={{ borderBottom: "1px solid oklch(0.20 0.007 240)" }}
               data-ocid={`athlete_sessions.row.${i + 1}`}
             >
-              <td className="py-3 pl-5 pr-4 whitespace-nowrap">
+              <td className="py-3 pl-5 pr-4 whitespace-nowrap align-top">
                 <span
                   className="text-sm font-medium"
                   style={{ color: "oklch(0.72 0.12 75)" }}
@@ -805,27 +823,55 @@ function AthleteSessionsSection({ athleteId }: { athleteId: AthleteId }) {
                   })}
                 </span>
               </td>
-              <td className="py-3 pr-4 whitespace-nowrap">
+              <td className="py-3 pr-4 whitespace-nowrap align-top">
                 <FatigueChip level={session.fatigueLevel} />
               </td>
-              <td className="py-3 pr-4 max-w-xs">
-                {session.notes ? (
-                  <span
-                    className="text-sm line-clamp-1"
-                    style={{ color: "oklch(0.60 0.01 240)" }}
-                  >
-                    {session.notes}
-                  </span>
-                ) : (
-                  <span
-                    className="text-sm italic"
-                    style={{ color: "oklch(0.38 0.008 240)" }}
-                  >
-                    No notes
-                  </span>
-                )}
+              <td className="py-3 pr-4 max-w-xs align-top">
+                <div className="flex flex-col gap-1.5">
+                  {session.activities && (
+                    <div>
+                      <p
+                        className="text-xs font-semibold mb-0.5"
+                        style={{ color: "oklch(0.55 0.009 240)" }}
+                      >
+                        Activities:
+                      </p>
+                      <p
+                        className="text-sm whitespace-pre-wrap"
+                        style={{ color: "oklch(0.65 0.01 240)" }}
+                      >
+                        {session.activities}
+                      </p>
+                    </div>
+                  )}
+                  {session.notes ? (
+                    <div>
+                      {session.activities && (
+                        <p
+                          className="text-xs font-semibold mb-0.5"
+                          style={{ color: "oklch(0.55 0.009 240)" }}
+                        >
+                          Notes:
+                        </p>
+                      )}
+                      <p
+                        className="text-sm whitespace-pre-wrap"
+                        style={{ color: "oklch(0.60 0.01 240)" }}
+                      >
+                        {session.notes}
+                      </p>
+                    </div>
+                  ) : !session.activities ? (
+                    <span
+                      className="text-sm italic"
+                      style={{ color: "oklch(0.38 0.008 240)" }}
+                    >
+                      No notes
+                    </span>
+                  ) : null}
+                </div>
               </td>
-              <td className="py-3 pr-5 text-right">
+              <td className="py-3 pr-5 text-right align-top">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
@@ -865,6 +911,54 @@ function AthleteSessionsSection({ athleteId }: { athleteId: AthleteId }) {
           ))}
         </tbody>
       </table>
+      <div
+        className="px-5 py-3"
+        style={{ borderTop: "1px solid oklch(0.24 0.008 240)" }}
+      >
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+              data-ocid="athlete_sessions.delete_all_button"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete All Sessions
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent className="elite-card border-border">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete All Sessions</AlertDialogTitle>
+              <AlertDialogDescription>
+                Delete all {sorted.length} session
+                {sorted.length !== 1 ? "s" : ""} for {athleteName}? This cannot
+                be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-ocid="athlete_sessions.delete_all_cancel_button">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteAll}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                data-ocid="athlete_sessions.delete_all_confirm_button"
+                disabled={deleteAllSessions.isPending}
+              >
+                {deleteAllSessions.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete All"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   );
 }
@@ -881,10 +975,13 @@ export function AthleteDetail() {
   const { data: strengthRecords = [] } =
     useGetStrengthRecordsForAthlete(athleteId);
   const deleteAthlete = useDeleteAthlete();
+  const updatePaid = useUpdateAthletePaid();
 
   const [editOpen, setEditOpen] = useState(false);
   const [addTestOpen, setAddTestOpen] = useState(false);
   const [addStrengthOpen, setAddStrengthOpen] = useState(false);
+  const [paymentEditing, setPaymentEditing] = useState(false);
+  const [paymentInput, setPaymentInput] = useState("");
 
   const handleDeleteAthlete = async () => {
     try {
@@ -985,6 +1082,110 @@ export function AthleteDetail() {
                   {athlete.notes}
                 </p>
               )}
+
+              {/* Total Paid */}
+              <div
+                className="mt-4 pt-4"
+                style={{ borderTop: "1px solid oklch(0.24 0.008 240)" }}
+              >
+                <p
+                  className="text-xs font-semibold uppercase tracking-wider mb-2"
+                  style={{ color: "oklch(0.50 0.009 240)" }}
+                >
+                  Total Paid
+                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <p
+                    className="text-xl font-bold font-display"
+                    style={{ color: "oklch(0.78 0.18 75)" }}
+                    data-ocid="athlete_detail.total_paid"
+                  >
+                    {(athlete.totalPaidKM ?? 0).toFixed(2)} KM
+                  </p>
+                  {!paymentEditing ? (
+                    <button
+                      type="button"
+                      className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+                      style={{
+                        background: "oklch(0.72 0.12 75 / 0.12)",
+                        color: "oklch(0.78 0.13 75)",
+                        border: "1px solid oklch(0.72 0.12 75 / 0.35)",
+                      }}
+                      onClick={() => {
+                        setPaymentInput(String(athlete.totalPaidKM ?? 0));
+                        setPaymentEditing(true);
+                      }}
+                      data-ocid="athlete_detail.update_payment_button"
+                    >
+                      Update Payment
+                    </button>
+                  ) : (
+                    <div
+                      className="flex items-center gap-2"
+                      data-ocid="athlete_detail.payment_form"
+                    >
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={paymentInput}
+                          onChange={(e) => setPaymentInput(e.target.value)}
+                          className="bg-muted border-border h-8 w-28 text-sm"
+                          placeholder="0.00"
+                          data-ocid="athlete_detail.payment_input"
+                        />
+                        <span
+                          className="text-sm font-semibold"
+                          style={{ color: "oklch(0.55 0.009 240)" }}
+                        >
+                          KM
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="btn-gold h-8 px-3 text-xs"
+                        disabled={updatePaid.isPending}
+                        data-ocid="athlete_detail.payment_save_button"
+                        onClick={async () => {
+                          const amount = Number.parseFloat(paymentInput);
+                          if (Number.isNaN(amount) || amount < 0) {
+                            toast.error("Enter a valid amount.");
+                            return;
+                          }
+                          try {
+                            await updatePaid.mutateAsync({
+                              id: athleteId,
+                              amount,
+                            });
+                            toast.success("Payment updated!");
+                            setPaymentEditing(false);
+                          } catch {
+                            toast.error("Failed to update payment.");
+                          }
+                        }}
+                      >
+                        {updatePaid.isPending ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          "Save"
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 px-2 text-xs"
+                        onClick={() => setPaymentEditing(false)}
+                        data-ocid="athlete_detail.payment_cancel_button"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
@@ -1132,6 +1333,15 @@ export function AthleteDetail() {
             strengthRecords={strengthRecords}
           />
         </motion.div>
+        {/* CMJ vs SJ Analysis */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.18 }}
+          className="mb-8"
+        >
+          <CmjSjComparison jumpTests={jumpTests} />
+        </motion.div>
 
         {/* Jump Test History */}
         <motion.div
@@ -1236,7 +1446,10 @@ export function AthleteDetail() {
           >
             Training Sessions
           </h2>
-          <AthleteSessionsSection athleteId={athleteId} />
+          <AthleteSessionsSection
+            athleteId={athleteId}
+            athleteName={athlete.name}
+          />
         </motion.div>
       </main>
     </div>

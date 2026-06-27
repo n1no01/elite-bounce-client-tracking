@@ -23,6 +23,7 @@ export const TrainingSession = IDL.Record({
   'date' : IDL.Text,
   'createdAt' : IDL.Int,
   'createdBy' : IDL.Principal,
+  'activities' : IDL.Opt(IDL.Text),
   'notes' : IDL.Text,
   'athleteIds' : IDL.Vec(IDL.Text),
 });
@@ -38,6 +39,7 @@ export const Athlete = IDL.Record({
   'createdAt' : IDL.Int,
   'sport' : IDL.Text,
   'notes' : IDL.Text,
+  'totalPaidKM' : IDL.Opt(IDL.Float64),
 });
 export const JumpTest = IDL.Record({
   'id' : TestId,
@@ -80,16 +82,17 @@ export const idlService = IDL.Service({
       [],
     ),
   'addTrainingSession' : IDL.Func(
-      [IDL.Text, IDL.Vec(IDL.Text), IDL.Nat, IDL.Text],
+      [IDL.Text, IDL.Vec(IDL.Text), IDL.Nat, IDL.Text, IDL.Opt(IDL.Text)],
       [TrainingSession],
       [],
     ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'createAthlete' : IDL.Func(
-      [IDL.Text, IDL.Nat, IDL.Text, IDL.Text],
+      [IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Opt(IDL.Float64)],
       [AthleteId],
       [],
     ),
+  'deleteAllTrainingSessionsForAthlete' : IDL.Func([IDL.Text], [], []),
   'deleteAthlete' : IDL.Func([AthleteId], [], []),
   'deleteJumpTest' : IDL.Func([TestId], [], []),
   'deleteStrengthRecord' : IDL.Func([StrengthRecordId], [], []),
@@ -133,6 +136,19 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'updateAthletePaid' : IDL.Func([AthleteId, IDL.Float64], [], []),
+  'updateTrainingSession' : IDL.Func(
+      [
+        IDL.Text,
+        IDL.Text,
+        IDL.Vec(IDL.Text),
+        IDL.Nat,
+        IDL.Text,
+        IDL.Opt(IDL.Text),
+      ],
+      [IDL.Variant({ 'ok' : TrainingSession, 'err' : IDL.Text })],
+      [],
+    ),
 });
 
 export const idlInitArgs = [];
@@ -153,6 +169,7 @@ export const idlFactory = ({ IDL }) => {
     'date' : IDL.Text,
     'createdAt' : IDL.Int,
     'createdBy' : IDL.Principal,
+    'activities' : IDL.Opt(IDL.Text),
     'notes' : IDL.Text,
     'athleteIds' : IDL.Vec(IDL.Text),
   });
@@ -168,6 +185,7 @@ export const idlFactory = ({ IDL }) => {
     'createdAt' : IDL.Int,
     'sport' : IDL.Text,
     'notes' : IDL.Text,
+    'totalPaidKM' : IDL.Opt(IDL.Float64),
   });
   const JumpTest = IDL.Record({
     'id' : TestId,
@@ -210,16 +228,17 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'addTrainingSession' : IDL.Func(
-        [IDL.Text, IDL.Vec(IDL.Text), IDL.Nat, IDL.Text],
+        [IDL.Text, IDL.Vec(IDL.Text), IDL.Nat, IDL.Text, IDL.Opt(IDL.Text)],
         [TrainingSession],
         [],
       ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'createAthlete' : IDL.Func(
-        [IDL.Text, IDL.Nat, IDL.Text, IDL.Text],
+        [IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Opt(IDL.Float64)],
         [AthleteId],
         [],
       ),
+    'deleteAllTrainingSessionsForAthlete' : IDL.Func([IDL.Text], [], []),
     'deleteAthlete' : IDL.Func([AthleteId], [], []),
     'deleteJumpTest' : IDL.Func([TestId], [], []),
     'deleteStrengthRecord' : IDL.Func([StrengthRecordId], [], []),
@@ -261,6 +280,19 @@ export const idlFactory = ({ IDL }) => {
     'updateAthlete' : IDL.Func(
         [AthleteId, IDL.Text, IDL.Nat, IDL.Text, IDL.Text],
         [],
+        [],
+      ),
+    'updateAthletePaid' : IDL.Func([AthleteId, IDL.Float64], [], []),
+    'updateTrainingSession' : IDL.Func(
+        [
+          IDL.Text,
+          IDL.Text,
+          IDL.Vec(IDL.Text),
+          IDL.Nat,
+          IDL.Text,
+          IDL.Opt(IDL.Text),
+        ],
+        [IDL.Variant({ 'ok' : TrainingSession, 'err' : IDL.Text })],
         [],
       ),
   });

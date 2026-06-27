@@ -9,15 +9,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ChevronDown,
   ClipboardList,
+  Edit2,
   Loader2,
   Plus,
   Trash2,
@@ -32,6 +31,7 @@ import {
   useDeleteTrainingSession,
   useGetAllAthletes,
   useGetAllTrainingSessions,
+  useUpdateTrainingSession,
 } from "../hooks/useQueries";
 import type { TrainingSession } from "../hooks/useQueries";
 
@@ -63,6 +63,146 @@ function FatigueIndicator({ level }: { level: number }) {
   );
 }
 
+// ─── Athlete Multi-Select ─────────────────────────────────────────────────────
+
+function AthleteMultiSelect({
+  athletes,
+  selectedIds,
+  onToggle,
+  ocidPrefix,
+}: {
+  athletes: { id: bigint; name: string; sport: string }[];
+  selectedIds: Set<string>;
+  onToggle: (id: string) => void;
+  ocidPrefix: string;
+}) {
+  if (athletes.length === 0) {
+    return (
+      <p className="text-sm" style={{ color: "oklch(0.45 0.009 240)" }}>
+        No athletes found. Add athletes first.
+      </p>
+    );
+  }
+  return (
+    <div
+      className="rounded-lg overflow-hidden"
+      style={{ border: "1px solid oklch(0.28 0.01 240)" }}
+    >
+      {athletes.map((athlete, i) => {
+        const idStr = athlete.id.toString();
+        const checked = selectedIds.has(idStr);
+        return (
+          <label
+            key={idStr}
+            className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors"
+            style={{
+              borderTop: i > 0 ? "1px solid oklch(0.22 0.008 240)" : undefined,
+            }}
+            data-ocid={`${ocidPrefix}.checkbox.${i + 1}`}
+          >
+            <div
+              className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-colors"
+              style={{
+                background: checked ? "oklch(0.72 0.12 75)" : "transparent",
+                border: `2px solid ${checked ? "oklch(0.72 0.12 75)" : "oklch(0.40 0.009 240)"}`,
+              }}
+            >
+              {checked && (
+                <svg
+                  viewBox="0 0 10 8"
+                  fill="none"
+                  className="w-2.5 h-2"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M1 4l3 3 5-6"
+                    stroke="oklch(0.10 0.005 240)"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </div>
+            <input
+              type="checkbox"
+              className="sr-only"
+              checked={checked}
+              onChange={() => onToggle(idStr)}
+            />
+            <span className="text-sm text-foreground">{athlete.name}</span>
+            <span
+              className="ml-auto text-xs"
+              style={{ color: "oklch(0.50 0.009 240)" }}
+            >
+              {athlete.sport}
+            </span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Fatigue Level Picker ─────────────────────────────────────────────────────
+
+function FatiguePicker({
+  value,
+  onChange,
+  ocidPrefix,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  ocidPrefix: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
+        Fatigue Level
+      </Label>
+      <div className="flex gap-2">
+        {[1, 2, 3, 4, 5].map((lvl) => (
+          <button
+            key={lvl}
+            type="button"
+            onClick={() => onChange(lvl)}
+            className="flex-1 h-10 rounded-lg text-sm font-bold transition-all"
+            style={
+              value === lvl
+                ? {
+                    background:
+                      lvl <= 2
+                        ? "oklch(0.72 0.17 145 / 0.25)"
+                        : lvl === 3
+                          ? "oklch(0.78 0.18 75 / 0.25)"
+                          : "oklch(0.65 0.22 25 / 0.25)",
+                    border: `2px solid ${lvl <= 2 ? "oklch(0.72 0.17 145)" : lvl === 3 ? "oklch(0.78 0.18 75)" : "oklch(0.65 0.22 25)"}`,
+                    color:
+                      lvl <= 2
+                        ? "oklch(0.72 0.17 145)"
+                        : lvl === 3
+                          ? "oklch(0.78 0.18 75)"
+                          : "oklch(0.65 0.22 25)",
+                  }
+                : {
+                    background: "oklch(0.16 0.006 240)",
+                    border: "2px solid oklch(0.28 0.01 240)",
+                    color: "oklch(0.55 0.009 240)",
+                  }
+            }
+            data-ocid={`${ocidPrefix}.fatigue.${lvl}`}
+          >
+            {lvl}
+          </button>
+        ))}
+      </div>
+      <p className="text-xs" style={{ color: "oklch(0.45 0.009 240)" }}>
+        1–2 = Low · 3 = Moderate · 4–5 = High
+      </p>
+    </div>
+  );
+}
+
 // ─── Add Session Form ─────────────────────────────────────────────────────────
 
 function AddSessionForm({ onClose }: { onClose: () => void }) {
@@ -75,6 +215,7 @@ function AddSessionForm({ onClose }: { onClose: () => void }) {
     new Set(),
   );
   const [fatigue, setFatigue] = useState(3);
+  const [activities, setActivities] = useState("");
   const [notes, setNotes] = useState("");
 
   const toggleAthlete = (id: string) => {
@@ -102,6 +243,7 @@ function AddSessionForm({ onClose }: { onClose: () => void }) {
         athleteIds: Array.from(selectedAthleteIds),
         fatigueLevel: fatigue,
         notes: notes.trim(),
+        activities: activities.trim(),
       });
       toast.success("Training session logged!");
       onClose();
@@ -145,120 +287,34 @@ function AddSessionForm({ onClose }: { onClose: () => void }) {
             </span>
           )}
         </Label>
-        {athletes.length === 0 ? (
-          <p className="text-sm" style={{ color: "oklch(0.45 0.009 240)" }}>
-            No athletes found. Add athletes first.
-          </p>
-        ) : (
-          <div
-            className="rounded-lg overflow-hidden"
-            style={{ border: "1px solid oklch(0.28 0.01 240)" }}
-          >
-            {athletes.map((athlete, i) => {
-              const idStr = athlete.id.toString();
-              const checked = selectedAthleteIds.has(idStr);
-              return (
-                <label
-                  key={idStr}
-                  className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors"
-                  style={{
-                    borderTop:
-                      i > 0 ? "1px solid oklch(0.22 0.008 240)" : undefined,
-                  }}
-                  data-ocid={`add_session.checkbox.${i + 1}`}
-                >
-                  <div
-                    className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-colors"
-                    style={{
-                      background: checked
-                        ? "oklch(0.72 0.12 75)"
-                        : "transparent",
-                      border: `2px solid ${checked ? "oklch(0.72 0.12 75)" : "oklch(0.40 0.009 240)"}`,
-                    }}
-                  >
-                    {checked && (
-                      <svg
-                        viewBox="0 0 10 8"
-                        fill="none"
-                        className="w-2.5 h-2"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M1 4l3 3 5-6"
-                          stroke="oklch(0.10 0.005 240)"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    )}
-                  </div>
-                  <input
-                    type="checkbox"
-                    className="sr-only"
-                    checked={checked}
-                    onChange={() => toggleAthlete(idStr)}
-                  />
-                  <span className="text-sm text-foreground">
-                    {athlete.name}
-                  </span>
-                  <span
-                    className="ml-auto text-xs"
-                    style={{ color: "oklch(0.50 0.009 240)" }}
-                  >
-                    {athlete.sport}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-        )}
+        <AthleteMultiSelect
+          athletes={athletes}
+          selectedIds={selectedAthleteIds}
+          onToggle={toggleAthlete}
+          ocidPrefix="add_session"
+        />
       </div>
 
       {/* Fatigue level */}
-      <div className="space-y-2">
+      <FatiguePicker
+        value={fatigue}
+        onChange={setFatigue}
+        ocidPrefix="add_session"
+      />
+
+      {/* Activities */}
+      <div className="space-y-1.5">
         <Label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
-          Fatigue Level
+          Session Activities (optional)
         </Label>
-        <div className="flex gap-2">
-          {[1, 2, 3, 4, 5].map((lvl) => (
-            <button
-              key={lvl}
-              type="button"
-              onClick={() => setFatigue(lvl)}
-              className="flex-1 h-10 rounded-lg text-sm font-bold transition-all"
-              style={
-                fatigue === lvl
-                  ? {
-                      background:
-                        lvl <= 2
-                          ? "oklch(0.72 0.17 145 / 0.25)"
-                          : lvl === 3
-                            ? "oklch(0.78 0.18 75 / 0.25)"
-                            : "oklch(0.65 0.22 25 / 0.25)",
-                      border: `2px solid ${lvl <= 2 ? "oklch(0.72 0.17 145)" : lvl === 3 ? "oklch(0.78 0.18 75)" : "oklch(0.65 0.22 25)"}`,
-                      color:
-                        lvl <= 2
-                          ? "oklch(0.72 0.17 145)"
-                          : lvl === 3
-                            ? "oklch(0.78 0.18 75)"
-                            : "oklch(0.65 0.22 25)",
-                    }
-                  : {
-                      background: "oklch(0.16 0.006 240)",
-                      border: "2px solid oklch(0.28 0.01 240)",
-                      color: "oklch(0.55 0.009 240)",
-                    }
-              }
-              data-ocid={`add_session.fatigue.${lvl}`}
-            >
-              {lvl}
-            </button>
-          ))}
-        </div>
-        <p className="text-xs" style={{ color: "oklch(0.45 0.009 240)" }}>
-          1–2 = Low · 3 = Moderate · 4–5 = High
-        </p>
+        <Textarea
+          value={activities}
+          onChange={(e) => setActivities(e.target.value)}
+          placeholder="Describe the exercises and drills done in this session..."
+          className="bg-muted resize-y"
+          rows={4}
+          data-ocid="add_session.activities_textarea"
+        />
       </div>
 
       {/* Notes */}
@@ -270,8 +326,8 @@ function AddSessionForm({ onClose }: { onClose: () => void }) {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Session observations, athlete feedback, focus areas..."
-          className="bg-muted resize-none"
-          rows={3}
+          className="bg-muted resize-y"
+          rows={4}
           data-ocid="add_session.textarea"
         />
       </div>
@@ -306,18 +362,204 @@ function AddSessionForm({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ─── Edit Session Inline Form ─────────────────────────────────────────────────
+
+function EditSessionForm({
+  session,
+  athletes,
+  onClose,
+}: {
+  session: TrainingSession;
+  athletes: { id: bigint; name: string; sport: string }[];
+  onClose: () => void;
+}) {
+  const updateSession = useUpdateTrainingSession();
+  const [date, setDate] = useState(session.date);
+  const [selectedAthleteIds, setSelectedAthleteIds] = useState<Set<string>>(
+    new Set(session.athleteIds),
+  );
+  const [fatigue, setFatigue] = useState(session.fatigueLevel);
+  const [activities, setActivities] = useState(session.activities ?? "");
+  const [notes, setNotes] = useState(session.notes);
+
+  const toggleAthlete = (id: string) => {
+    setSelectedAthleteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!date) {
+      toast.error("Please select a date.");
+      return;
+    }
+    if (selectedAthleteIds.size === 0) {
+      toast.error("Select at least one athlete.");
+      return;
+    }
+    try {
+      await updateSession.mutateAsync({
+        sessionId: session.id,
+        date,
+        athleteIds: Array.from(selectedAthleteIds),
+        fatigueLevel: fatigue,
+        notes: notes.trim(),
+        activities: activities.trim(),
+      });
+      toast.success("Session updated!");
+      onClose();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update session.",
+      );
+    }
+  };
+
+  return (
+    <motion.tr
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2 }}
+      data-ocid={`sessions.edit_form.${session.id}`}
+    >
+      <td colSpan={5} className="py-0">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4 p-5"
+          style={{ borderBottom: "1px solid oklch(0.20 0.007 240)" }}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <Edit2
+              className="w-3.5 h-3.5"
+              style={{ color: "oklch(0.72 0.12 75)" }}
+            />
+            <span className="text-sm font-semibold text-foreground">
+              Edit Session
+            </span>
+          </div>
+
+          {/* Date */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
+              Session Date
+            </Label>
+            <Input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="bg-muted max-w-xs"
+              data-ocid="edit_session.input"
+            />
+          </div>
+
+          {/* Athletes */}
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
+              Athletes Attending
+              {selectedAthleteIds.size > 0 && (
+                <span
+                  className="ml-2 font-normal"
+                  style={{ color: "oklch(0.72 0.12 75)" }}
+                >
+                  ({selectedAthleteIds.size} selected)
+                </span>
+              )}
+            </Label>
+            <AthleteMultiSelect
+              athletes={athletes}
+              selectedIds={selectedAthleteIds}
+              onToggle={toggleAthlete}
+              ocidPrefix="edit_session"
+            />
+          </div>
+
+          {/* Fatigue */}
+          <FatiguePicker
+            value={fatigue}
+            onChange={setFatigue}
+            ocidPrefix="edit_session"
+          />
+
+          {/* Activities */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
+              Session Activities (optional)
+            </Label>
+            <Textarea
+              value={activities}
+              onChange={(e) => setActivities(e.target.value)}
+              placeholder="Describe the exercises and drills done in this session..."
+              className="bg-muted resize-y"
+              rows={4}
+              data-ocid="edit_session.activities_textarea"
+            />
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
+              Coaching Notes (optional)
+            </Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Session observations, athlete feedback, focus areas..."
+              className="bg-muted resize-y"
+              rows={4}
+              data-ocid="edit_session.textarea"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-1">
+            <Button
+              type="submit"
+              disabled={updateSession.isPending}
+              className="btn-gold"
+              data-ocid="edit_session.save_button"
+            >
+              {updateSession.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              data-ocid="edit_session.cancel_button"
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </td>
+    </motion.tr>
+  );
+}
+
 // ─── Session Row ──────────────────────────────────────────────────────────────
 
 function SessionRow({
   session,
   index,
   athleteNameMap,
+  athletes,
 }: {
   session: TrainingSession;
   index: number;
   athleteNameMap: Map<string, string>;
+  athletes: { id: bigint; name: string; sport: string }[];
 }) {
   const deleteSession = useDeleteTrainingSession();
+  const [isEditing, setIsEditing] = useState(false);
 
   const handleDelete = async () => {
     try {
@@ -332,6 +574,16 @@ function SessionRow({
     .map((id) => athleteNameMap.get(id) ?? "Unknown")
     .join(", ");
 
+  if (isEditing) {
+    return (
+      <EditSessionForm
+        session={session}
+        athletes={athletes}
+        onClose={() => setIsEditing(false)}
+      />
+    );
+  }
+
   return (
     <motion.tr
       initial={{ opacity: 0, x: -8 }}
@@ -341,7 +593,7 @@ function SessionRow({
       data-ocid={`sessions.row.${index + 1}`}
     >
       {/* Date */}
-      <td className="py-3.5 pr-4 whitespace-nowrap">
+      <td className="py-3.5 pr-4 whitespace-nowrap align-top">
         <span
           className="text-sm font-medium"
           style={{ color: "oklch(0.72 0.12 75)" }}
@@ -355,7 +607,7 @@ function SessionRow({
         </span>
       </td>
       {/* Athletes */}
-      <td className="py-3.5 pr-4">
+      <td className="py-3.5 pr-4 align-top">
         <div className="flex items-center gap-2 min-w-0">
           <Users
             className="w-3.5 h-3.5 shrink-0"
@@ -373,70 +625,111 @@ function SessionRow({
         </div>
       </td>
       {/* Fatigue */}
-      <td className="py-3.5 pr-4 whitespace-nowrap">
+      <td className="py-3.5 pr-4 whitespace-nowrap align-top">
         <FatigueIndicator level={session.fatigueLevel} />
       </td>
-      {/* Notes */}
-      <td className="py-3.5 pr-4 max-w-xs">
-        {session.notes ? (
-          <span
-            className="text-sm line-clamp-2"
-            style={{ color: "oklch(0.60 0.01 240)" }}
-          >
-            {session.notes}
-          </span>
-        ) : (
-          <span
-            className="text-sm italic"
-            style={{ color: "oklch(0.38 0.008 240)" }}
-          >
-            No notes
-          </span>
-        )}
-      </td>
-      {/* Action */}
-      <td className="py-3.5 text-right">
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 w-7 p-0 hover:text-destructive hover:bg-destructive/10"
-              data-ocid={`sessions.delete_button.${index + 1}`}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent className="elite-card border-border">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Session</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete this training session from{" "}
-                {new Date(session.date).toLocaleDateString()}? This cannot be
-                undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel data-ocid="sessions.cancel_button">
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                data-ocid="sessions.confirm_button"
+      {/* Activities + Notes */}
+      <td className="py-3.5 pr-4 max-w-sm align-top">
+        <div className="flex flex-col gap-2">
+          {session.activities && (
+            <div>
+              <p
+                className="text-xs font-semibold mb-0.5"
+                style={{ color: "oklch(0.55 0.009 240)" }}
               >
-                {deleteSession.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  "Delete Session"
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                Activities:
+              </p>
+              <p
+                className="text-sm whitespace-pre-wrap"
+                style={{ color: "oklch(0.65 0.01 240)" }}
+              >
+                {session.activities}
+              </p>
+            </div>
+          )}
+          {session.notes ? (
+            <div>
+              {session.activities && (
+                <p
+                  className="text-xs font-semibold mb-0.5"
+                  style={{ color: "oklch(0.55 0.009 240)" }}
+                >
+                  Notes:
+                </p>
+              )}
+              <p
+                className="text-sm whitespace-pre-wrap"
+                style={{ color: "oklch(0.60 0.01 240)" }}
+              >
+                {session.notes}
+              </p>
+            </div>
+          ) : !session.activities ? (
+            <span
+              className="text-sm italic"
+              style={{ color: "oklch(0.38 0.008 240)" }}
+            >
+              No notes
+            </span>
+          ) : null}
+        </div>
+      </td>
+      {/* Actions */}
+      <td className="py-3.5 text-right whitespace-nowrap align-top">
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs gap-1"
+            style={{ color: "oklch(0.72 0.12 75)" }}
+            onClick={() => setIsEditing(true)}
+            data-ocid={`sessions.edit_button.${index + 1}`}
+          >
+            <Edit2 className="w-3 h-3" />
+            Edit
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0 hover:text-destructive hover:bg-destructive/10"
+                data-ocid={`sessions.delete_button.${index + 1}`}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="elite-card border-border">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Session</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this training session from{" "}
+                  {new Date(session.date).toLocaleDateString()}? This cannot be
+                  undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel data-ocid="sessions.cancel_button">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  data-ocid="sessions.confirm_button"
+                >
+                  {deleteSession.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Delete Session"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </td>
     </motion.tr>
   );
@@ -629,7 +922,13 @@ export function TrainingSessions() {
                       background: "oklch(0.14 0.006 240 / 0.6)",
                     }}
                   >
-                    {["Date", "Athletes", "Fatigue", "Notes", ""].map((h) => (
+                    {[
+                      "Date",
+                      "Athletes",
+                      "Fatigue",
+                      "Activities & Notes",
+                      "",
+                    ].map((h) => (
                       <th
                         key={h}
                         className={`px-0 py-3 text-left text-xs font-semibold tracking-wider uppercase pr-4 first:pl-5 last:pr-5 ${h === "" ? "text-right" : ""}`}
@@ -647,6 +946,7 @@ export function TrainingSessions() {
                       session={session}
                       index={i}
                       athleteNameMap={athleteNameMap}
+                      athletes={athletes}
                     />
                   ))}
                 </tbody>

@@ -96,6 +96,7 @@ export interface TrainingSession {
     date: string;
     createdAt: bigint;
     createdBy: Principal;
+    activities?: string;
     notes: string;
     athleteIds: Array<string>;
 }
@@ -116,6 +117,7 @@ export interface Athlete {
     createdAt: bigint;
     sport: string;
     notes: string;
+    totalPaidKM?: number;
 }
 export type StrengthRecordId = bigint;
 export interface JumpTest {
@@ -143,9 +145,10 @@ export interface backendInterface {
     _initializeAccessControl(): Promise<void>;
     addJumpTest(athleteId: AthleteId, testType: TestType, date: string, height: number | null, distance: number | null, rsi: number | null, dropHeight: number | null): Promise<TestId>;
     addStrengthRecord(athleteId: AthleteId, liftType: StrengthLiftType, weightKg: number, date: string): Promise<StrengthRecordId>;
-    addTrainingSession(date: string, athleteIds: Array<string>, fatigueLevel: bigint, notes: string): Promise<TrainingSession>;
+    addTrainingSession(date: string, athleteIds: Array<string>, fatigueLevel: bigint, notes: string, activities: string | null): Promise<TrainingSession>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    createAthlete(name: string, age: bigint, sport: string, notes: string): Promise<AthleteId>;
+    createAthlete(name: string, age: bigint, sport: string, notes: string, totalPaidKM: number | null): Promise<AthleteId>;
+    deleteAllTrainingSessionsForAthlete(athleteId: string): Promise<void>;
     deleteAthlete(id: AthleteId): Promise<void>;
     deleteJumpTest(testId: TestId): Promise<void>;
     deleteStrengthRecord(recordId: StrengthRecordId): Promise<void>;
@@ -161,8 +164,16 @@ export interface backendInterface {
     getTrainingSessionsForAthlete(athleteId: string): Promise<Array<TrainingSession>>;
     isCallerAdmin(): Promise<boolean>;
     updateAthlete(id: AthleteId, name: string, age: bigint, sport: string, notes: string): Promise<void>;
+    updateAthletePaid(athleteId: AthleteId, amount: number): Promise<void>;
+    updateTrainingSession(sessionId: string, date: string, athleteIds: Array<string>, fatigueLevel: bigint, notes: string, activities: string | null): Promise<{
+        __kind__: "ok";
+        ok: TrainingSession;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
 }
-import type { Athlete as _Athlete, AthleteId as _AthleteId, JumpTest as _JumpTest, StrengthLiftType as _StrengthLiftType, StrengthRecord as _StrengthRecord, StrengthRecordId as _StrengthRecordId, TestId as _TestId, TestType as _TestType, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
+import type { Athlete as _Athlete, AthleteId as _AthleteId, JumpTest as _JumpTest, StrengthLiftType as _StrengthLiftType, StrengthRecord as _StrengthRecord, StrengthRecordId as _StrengthRecordId, TestId as _TestId, TestType as _TestType, TrainingSession as _TrainingSession, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _initializeAccessControl(): Promise<void> {
@@ -207,45 +218,59 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async addTrainingSession(arg0: string, arg1: Array<string>, arg2: bigint, arg3: string): Promise<TrainingSession> {
+    async addTrainingSession(arg0: string, arg1: Array<string>, arg2: bigint, arg3: string, arg4: string | null): Promise<TrainingSession> {
         if (this.processError) {
             try {
-                const result = await this.actor.addTrainingSession(arg0, arg1, arg2, arg3);
-                return result;
+                const result = await this.actor.addTrainingSession(arg0, arg1, arg2, arg3, to_candid_opt_n4(this._uploadFile, this._downloadFile, arg4));
+                return from_candid_TrainingSession_n5(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.addTrainingSession(arg0, arg1, arg2, arg3);
-            return result;
+            const result = await this.actor.addTrainingSession(arg0, arg1, arg2, arg3, to_candid_opt_n4(this._uploadFile, this._downloadFile, arg4));
+            return from_candid_TrainingSession_n5(this._uploadFile, this._downloadFile, result);
         }
     }
     async assignCallerUserRole(arg0: Principal, arg1: UserRole): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n4(this._uploadFile, this._downloadFile, arg1));
+                const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n8(this._uploadFile, this._downloadFile, arg1));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n4(this._uploadFile, this._downloadFile, arg1));
+            const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n8(this._uploadFile, this._downloadFile, arg1));
             return result;
         }
     }
-    async createAthlete(arg0: string, arg1: bigint, arg2: string, arg3: string): Promise<AthleteId> {
+    async createAthlete(arg0: string, arg1: bigint, arg2: string, arg3: string, arg4: number | null): Promise<AthleteId> {
         if (this.processError) {
             try {
-                const result = await this.actor.createAthlete(arg0, arg1, arg2, arg3);
+                const result = await this.actor.createAthlete(arg0, arg1, arg2, arg3, to_candid_opt_n1(this._uploadFile, this._downloadFile, arg4));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.createAthlete(arg0, arg1, arg2, arg3);
+            const result = await this.actor.createAthlete(arg0, arg1, arg2, arg3, to_candid_opt_n1(this._uploadFile, this._downloadFile, arg4));
+            return result;
+        }
+    }
+    async deleteAllTrainingSessionsForAthlete(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteAllTrainingSessionsForAthlete(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteAllTrainingSessionsForAthlete(arg0);
             return result;
         }
     }
@@ -309,126 +334,126 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.getAllAthletes();
-                return result;
+                return from_candid_vec_n10(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getAllAthletes();
-            return result;
+            return from_candid_vec_n10(this._uploadFile, this._downloadFile, result);
         }
     }
     async getAllTrainingSessions(): Promise<Array<TrainingSession>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getAllTrainingSessions();
-                return result;
+                return from_candid_vec_n14(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getAllTrainingSessions();
-            return result;
+            return from_candid_vec_n14(this._uploadFile, this._downloadFile, result);
         }
     }
     async getAthlete(arg0: AthleteId): Promise<Athlete | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getAthlete(arg0);
-                return from_candid_opt_n6(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n15(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getAthlete(arg0);
-            return from_candid_opt_n6(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n15(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerUserRole(): Promise<UserRole> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserRole();
-                return from_candid_UserRole_n7(this._uploadFile, this._downloadFile, result);
+                return from_candid_UserRole_n16(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserRole();
-            return from_candid_UserRole_n7(this._uploadFile, this._downloadFile, result);
+            return from_candid_UserRole_n16(this._uploadFile, this._downloadFile, result);
         }
     }
     async getJumpTestsByType(arg0: AthleteId, arg1: TestType): Promise<Array<JumpTest>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getJumpTestsByType(arg0, arg1);
-                return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n18(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getJumpTestsByType(arg0, arg1);
-            return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n18(this._uploadFile, this._downloadFile, result);
         }
     }
     async getJumpTestsForAthlete(arg0: AthleteId): Promise<Array<JumpTest>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getJumpTestsForAthlete(arg0);
-                return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n18(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getJumpTestsForAthlete(arg0);
-            return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n18(this._uploadFile, this._downloadFile, result);
         }
     }
     async getStrengthRecordsByLift(arg0: AthleteId, arg1: StrengthLiftType): Promise<Array<StrengthRecord>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getStrengthRecordsByLift(arg0, to_candid_StrengthLiftType_n2(this._uploadFile, this._downloadFile, arg1));
-                return from_candid_vec_n13(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n21(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getStrengthRecordsByLift(arg0, to_candid_StrengthLiftType_n2(this._uploadFile, this._downloadFile, arg1));
-            return from_candid_vec_n13(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n21(this._uploadFile, this._downloadFile, result);
         }
     }
     async getStrengthRecordsForAthlete(arg0: AthleteId): Promise<Array<StrengthRecord>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getStrengthRecordsForAthlete(arg0);
-                return from_candid_vec_n13(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n21(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getStrengthRecordsForAthlete(arg0);
-            return from_candid_vec_n13(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n21(this._uploadFile, this._downloadFile, result);
         }
     }
     async getTrainingSessionsForAthlete(arg0: string): Promise<Array<TrainingSession>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getTrainingSessionsForAthlete(arg0);
-                return result;
+                return from_candid_vec_n14(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getTrainingSessionsForAthlete(arg0);
-            return result;
+            return from_candid_vec_n14(this._uploadFile, this._downloadFile, result);
         }
     }
     async isCallerAdmin(): Promise<boolean> {
@@ -459,26 +484,96 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async updateAthletePaid(arg0: AthleteId, arg1: number): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateAthletePaid(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateAthletePaid(arg0, arg1);
+            return result;
+        }
+    }
+    async updateTrainingSession(arg0: string, arg1: string, arg2: Array<string>, arg3: bigint, arg4: string, arg5: string | null): Promise<{
+        __kind__: "ok";
+        ok: TrainingSession;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateTrainingSession(arg0, arg1, arg2, arg3, arg4, to_candid_opt_n4(this._uploadFile, this._downloadFile, arg5));
+                return from_candid_variant_n26(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateTrainingSession(arg0, arg1, arg2, arg3, arg4, to_candid_opt_n4(this._uploadFile, this._downloadFile, arg5));
+            return from_candid_variant_n26(this._uploadFile, this._downloadFile, result);
+        }
+    }
 }
-function from_candid_JumpTest_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _JumpTest): JumpTest {
-    return from_candid_record_n11(_uploadFile, _downloadFile, value);
+function from_candid_Athlete_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Athlete): Athlete {
+    return from_candid_record_n12(_uploadFile, _downloadFile, value);
 }
-function from_candid_StrengthLiftType_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _StrengthLiftType): StrengthLiftType {
+function from_candid_JumpTest_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _JumpTest): JumpTest {
+    return from_candid_record_n20(_uploadFile, _downloadFile, value);
+}
+function from_candid_StrengthLiftType_n24(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _StrengthLiftType): StrengthLiftType {
+    return from_candid_variant_n25(_uploadFile, _downloadFile, value);
+}
+function from_candid_StrengthRecord_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _StrengthRecord): StrengthRecord {
+    return from_candid_record_n23(_uploadFile, _downloadFile, value);
+}
+function from_candid_TrainingSession_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _TrainingSession): TrainingSession {
+    return from_candid_record_n6(_uploadFile, _downloadFile, value);
+}
+function from_candid_UserRole_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
     return from_candid_variant_n17(_uploadFile, _downloadFile, value);
 }
-function from_candid_StrengthRecord_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _StrengthRecord): StrengthRecord {
-    return from_candid_record_n15(_uploadFile, _downloadFile, value);
-}
-function from_candid_UserRole_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
-    return from_candid_variant_n8(_uploadFile, _downloadFile, value);
-}
-function from_candid_opt_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [number]): number | null {
+function from_candid_opt_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [number]): number | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Athlete]): Athlete | null {
+function from_candid_opt_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Athlete]): Athlete | null {
+    return value.length === 0 ? null : from_candid_Athlete_n11(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_opt_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_record_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_record_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: _AthleteId;
+    age: bigint;
+    name: string;
+    createdAt: bigint;
+    sport: string;
+    notes: string;
+    totalPaidKM: [] | [number];
+}): {
+    id: AthleteId;
+    age: bigint;
+    name: string;
+    createdAt: bigint;
+    sport: string;
+    notes: string;
+    totalPaidKM?: number;
+} {
+    return {
+        id: value.id,
+        age: value.age,
+        name: value.name,
+        createdAt: value.createdAt,
+        sport: value.sport,
+        notes: value.notes,
+        totalPaidKM: record_opt_to_undefined(from_candid_opt_n13(_uploadFile, _downloadFile, value.totalPaidKM))
+    };
+}
+function from_candid_record_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     id: _TestId;
     rsi: [] | [number];
     height: [] | [number];
@@ -501,17 +596,17 @@ function from_candid_record_n11(_uploadFile: (file: ExternalBlob) => Promise<Uin
 } {
     return {
         id: value.id,
-        rsi: record_opt_to_undefined(from_candid_opt_n12(_uploadFile, _downloadFile, value.rsi)),
-        height: record_opt_to_undefined(from_candid_opt_n12(_uploadFile, _downloadFile, value.height)),
-        dropHeight: record_opt_to_undefined(from_candid_opt_n12(_uploadFile, _downloadFile, value.dropHeight)),
+        rsi: record_opt_to_undefined(from_candid_opt_n13(_uploadFile, _downloadFile, value.rsi)),
+        height: record_opt_to_undefined(from_candid_opt_n13(_uploadFile, _downloadFile, value.height)),
+        dropHeight: record_opt_to_undefined(from_candid_opt_n13(_uploadFile, _downloadFile, value.dropHeight)),
         date: value.date,
         createdAt: value.createdAt,
         testType: value.testType,
         athleteId: value.athleteId,
-        distance: record_opt_to_undefined(from_candid_opt_n12(_uploadFile, _downloadFile, value.distance))
+        distance: record_opt_to_undefined(from_candid_opt_n13(_uploadFile, _downloadFile, value.distance))
     };
 }
-function from_candid_record_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_record_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     id: _StrengthRecordId;
     date: string;
     createdAt: bigint;
@@ -532,19 +627,40 @@ function from_candid_record_n15(_uploadFile: (file: ExternalBlob) => Promise<Uin
         createdAt: value.createdAt,
         athleteId: value.athleteId,
         weightKg: value.weightKg,
-        liftType: from_candid_StrengthLiftType_n16(_uploadFile, _downloadFile, value.liftType)
+        liftType: from_candid_StrengthLiftType_n24(_uploadFile, _downloadFile, value.liftType)
+    };
+}
+function from_candid_record_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: string;
+    fatigueLevel: bigint;
+    date: string;
+    createdAt: bigint;
+    createdBy: Principal;
+    activities: [] | [string];
+    notes: string;
+    athleteIds: Array<string>;
+}): {
+    id: string;
+    fatigueLevel: bigint;
+    date: string;
+    createdAt: bigint;
+    createdBy: Principal;
+    activities?: string;
+    notes: string;
+    athleteIds: Array<string>;
+} {
+    return {
+        id: value.id,
+        fatigueLevel: value.fatigueLevel,
+        date: value.date,
+        createdAt: value.createdAt,
+        createdBy: value.createdBy,
+        activities: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.activities)),
+        notes: value.notes,
+        athleteIds: value.athleteIds
     };
 }
 function from_candid_variant_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    powerClean: null;
-} | {
-    backSquat: null;
-} | {
-    deadlift: null;
-}): StrengthLiftType {
-    return "powerClean" in value ? StrengthLiftType.powerClean : "backSquat" in value ? StrengthLiftType.backSquat : "deadlift" in value ? StrengthLiftType.deadlift : value;
-}
-function from_candid_variant_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     admin: null;
 } | {
     user: null;
@@ -553,19 +669,56 @@ function from_candid_variant_n8(_uploadFile: (file: ExternalBlob) => Promise<Uin
 }): UserRole {
     return "admin" in value ? UserRole.admin : "user" in value ? UserRole.user : "guest" in value ? UserRole.guest : value;
 }
-function from_candid_vec_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_StrengthRecord>): Array<StrengthRecord> {
-    return value.map((x)=>from_candid_StrengthRecord_n14(_uploadFile, _downloadFile, x));
+function from_candid_variant_n25(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    powerClean: null;
+} | {
+    backSquat: null;
+} | {
+    deadlift: null;
+}): StrengthLiftType {
+    return "powerClean" in value ? StrengthLiftType.powerClean : "backSquat" in value ? StrengthLiftType.backSquat : "deadlift" in value ? StrengthLiftType.deadlift : value;
 }
-function from_candid_vec_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_JumpTest>): Array<JumpTest> {
-    return value.map((x)=>from_candid_JumpTest_n10(_uploadFile, _downloadFile, x));
+function from_candid_variant_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: _TrainingSession;
+} | {
+    err: string;
+}): {
+    __kind__: "ok";
+    ok: TrainingSession;
+} | {
+    __kind__: "err";
+    err: string;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: from_candid_TrainingSession_n5(_uploadFile, _downloadFile, value.ok)
+    } : "err" in value ? {
+        __kind__: "err",
+        err: value.err
+    } : value;
+}
+function from_candid_vec_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Athlete>): Array<Athlete> {
+    return value.map((x)=>from_candid_Athlete_n11(_uploadFile, _downloadFile, x));
+}
+function from_candid_vec_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_TrainingSession>): Array<TrainingSession> {
+    return value.map((x)=>from_candid_TrainingSession_n5(_uploadFile, _downloadFile, x));
+}
+function from_candid_vec_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_JumpTest>): Array<JumpTest> {
+    return value.map((x)=>from_candid_JumpTest_n19(_uploadFile, _downloadFile, x));
+}
+function from_candid_vec_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_StrengthRecord>): Array<StrengthRecord> {
+    return value.map((x)=>from_candid_StrengthRecord_n22(_uploadFile, _downloadFile, x));
 }
 function to_candid_StrengthLiftType_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: StrengthLiftType): _StrengthLiftType {
     return to_candid_variant_n3(_uploadFile, _downloadFile, value);
 }
-function to_candid_UserRole_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
-    return to_candid_variant_n5(_uploadFile, _downloadFile, value);
+function to_candid_UserRole_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
+    return to_candid_variant_n9(_uploadFile, _downloadFile, value);
 }
 function to_candid_opt_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: number | null): [] | [number] {
+    return value === null ? candid_none() : candid_some(value);
+}
+function to_candid_opt_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: string | null): [] | [string] {
     return value === null ? candid_none() : candid_some(value);
 }
 function to_candid_variant_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: StrengthLiftType): {
@@ -583,7 +736,7 @@ function to_candid_variant_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8
         deadlift: null
     } : value;
 }
-function to_candid_variant_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {
+function to_candid_variant_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {
     admin: null;
 } | {
     user: null;

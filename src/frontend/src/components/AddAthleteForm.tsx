@@ -55,7 +55,7 @@ export function AddAthleteForm({ onSuccess, onCancel }: AddAthleteFormProps) {
         age: parsedAge,
         sport: sport.trim(),
         notes: notes.trim(),
-      });
+      }); // totalPaidKM defaults to null on create — backend handles it
       toast.success("Athlete added successfully!");
       onSuccess?.();
     } catch (err) {
